@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# Mosaic
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<p align="center">
+  <img src="public/mosaic-logo.svg" alt="Mosaic Logo" width="128" />
+</p>
 
-Currently, two official plugins are available:
+A fast, keyboard-driven tab overview interface for your browser. Find, manage, and switch between your open tabs with an elegant, Exposé-style grid featuring visual thumbnails.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Features
 
-## React Compiler
+- **Visual Overview:** Instantly see all your open tabs across all browser windows in a clean, responsive grid layout.
+- **Live Thumbnails:** Get immediate visual context with automatically captured preview thumbnails of pages.
+- **Lightning-Fast Search:** Use fuzzy search to instantly filter tabs by title or URL. Just start typing!
+- **Keyboard-First Navigation:** Fully controllable via keyboard. Navigate the grid with arrow keys, hit `Enter` to switch, or `Escape` to close.
+- **Smart Auto-Focus:** Automatically centers and highlights your currently active tab the moment you open the overview.
+- **Tab Management:** Close unwanted tabs directly from the interface without losing your place.
+- **Modern UI/UX:** Built with React, Tailwind CSS, and Framer Motion for a sleek, responsive, and native-feeling experience.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ⌨️ Shortcuts
 
-## Expanding the ESLint configuration
+- **Open Mosaic:** `Command+Shift+Y` (Mac) / `Ctrl+Shift+Y` (Windows/Linux)
+- **Navigate Grid:** Arrow Keys (`↑`, `↓`, `←`, `→`)
+- **Switch to Tab:** `Enter` or Double-click
+- **Close Tab:** Mouse hover + click the `X` button
+- **Search:** Begin typing anywhere to focus the search bar
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🚀 Installation & Development
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Mosaic is built as a highly optimized Vite extension project using React and TypeScript.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prerequisites
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- [Node.js](https://nodejs.org/) installed
+- npm or yarn
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Local Setup
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/mosaic.git
+   cd mosaic
+   ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Build the extension:**
+   ```bash
+   npm run build
+   ```
+
+4. **Load into Google Chrome / Edge / Brave:**
+   - Open your browser and navigate to `chrome://extensions/`
+   - Enable **Developer mode** using the toggle in the top right corner.
+   - Click **Load unpacked** in the top left.
+   - Select the `dist` folder located in the project directory.
+
+## 🛠️ Tech Stack
+
+- **Framework:** React 19 + TypeScript
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS + Lucide React icons
+- **Animations:** Framer Motion
+- **Search Engine:** Fuse.js
+- **Performance:** `react-window` for virtualized grid rendering (handles hundreds of tabs smoothly)
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are always welcome! Whether it's a bug report or a new feature idea, feel free to open an issue or submit a pull request.
+
+## 📝 License
+
+This project is open-source and available under the [MIT License](LICENSE).

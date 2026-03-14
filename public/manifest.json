@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Tab Exposé",
+  "name": "Mosaic",
   "version": "1.0.0",
   "description": "Fast keyboard-driven tab overview interface with thumbnails",
   "background": {
@@ -24,7 +24,7 @@
         "default": "Ctrl+Shift+Y",
         "mac": "Command+Shift+Y"
       },
-      "description": "Open Tab Exposé Overview"
+      "description": "Open Mosaic Overview"
     }
   }
 }
