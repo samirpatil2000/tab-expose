@@ -10,7 +10,8 @@
   "permissions": [
     "tabs",
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabCapture"
   ],
   "action": {},
   "host_permissions": [

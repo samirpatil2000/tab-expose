@@ -23,41 +23,46 @@ export async function getThumbnail(url: string): Promise<string | null> {
 }
 
 // Resizes a data URL visually using an offscreen canvas
-function resizeThumbnail(dataUrl: string, width: number, height: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        return resolve(dataUrl); // Fallback
-      }
+async function resizeThumbnail(dataUrl: string, width: number, height: number): Promise<string> {
+  try {
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+    
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return dataUrl; // Fallback
 
-      // Calculate cover dimensions
-      const imgAspect = img.width / img.height;
-      const targetAspect = width / height;
-      
-      let drawWidth = width;
-      let drawHeight = height;
-      let offsetX = 0;
-      let offsetY = 0;
+    // Calculate cover dimensions
+    const imgAspect = bitmap.width / bitmap.height;
+    const targetAspect = width / height;
+    
+    let drawWidth = width;
+    let drawHeight = height;
+    let offsetX = 0;
+    let offsetY = 0;
 
-      if (imgAspect > targetAspect) {
-        drawWidth = height * imgAspect;
-        offsetX = (width - drawWidth) / 2;
-      } else {
-        drawHeight = width / imgAspect;
-        offsetY = (height - drawHeight) / 2;
-      }
+    if (imgAspect > targetAspect) {
+      drawWidth = height * imgAspect;
+      offsetX = (width - drawWidth) / 2;
+    } else {
+      drawHeight = width / imgAspect;
+      offsetY = (height - drawHeight) / 2;
+    }
 
-      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-      resolve(canvas.toDataURL('image/jpeg', 0.6));
-    };
-    img.onerror = reject;
-    img.src = dataUrl;
-  });
+    ctx.drawImage(bitmap, offsetX, offsetY, drawWidth, drawHeight);
+    
+    const outBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.6 });
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(outBlob);
+    });
+  } catch (err) {
+    console.debug('Failed to resize thumbnail', err);
+    return dataUrl;
+  }
 }
 
 // Limit concurrent captures

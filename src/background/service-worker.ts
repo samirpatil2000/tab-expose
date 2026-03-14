@@ -33,11 +33,10 @@ chrome.action.onClicked.addListener(() => {
 
 // Capture thumbnail when a tab finishes loading
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.active && tab.url && tab.windowId) {
-    // Small delay to let rendering finish
-    setTimeout(() => {
-      captureTabById(tabId, tab.windowId, tab.url!);
-    }, 500);
+  if (changeInfo.status === 'complete' && tab.active && tab.url && tab.windowId && !tab.url.startsWith('chrome://')) {
+    new Promise<void>(resolve => setTimeout(resolve, 500)).then(() => {
+      captureTabById(tabId, tab.windowId!, tab.url!);
+    });
   }
 });
 

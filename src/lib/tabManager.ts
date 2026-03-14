@@ -11,8 +11,9 @@ export async function getAllTabs(): Promise<TabInfo[]> {
   const currentWindow = await chrome.windows.getCurrent();
   const tabs = await chrome.tabs.query({});
   
+  const extensionUrl = chrome.runtime.getURL('');
   const mappedTabs: TabInfo[] = tabs
-    .filter(tab => tab.id !== undefined)
+    .filter(tab => tab.id !== undefined && (!tab.url || !tab.url.startsWith(extensionUrl)))
     .map(tab => ({
       id: tab.id!,
       title: tab.title || 'Untitled',
