@@ -11,7 +11,8 @@
     "tabs",
     "storage",
     "activeTab",
-    "tabCapture"
+    "tabCapture",
+    "favicon"
   ],
   "action": {},
   "host_permissions": [

@@ -13,6 +13,30 @@ interface TabCardProps {
   isEnterAnim?: boolean;
 }
 
+const getFaviconUrl = (u: string, size: number) => {
+  const url = new URL(chrome.runtime.getURL('/_favicon/'));
+  url.searchParams.set('pageUrl', u);
+  url.searchParams.set('size', size.toString());
+  return url.toString();
+};
+
+const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fallbackSize }: { pageUrl?: string, originalSrc?: string, className: string, fallbackClassName: string, fallbackSize: number }) => {
+  const [errorCount, setErrorCount] = useState(0);
+  
+  let srcToTry;
+  if (errorCount === 0 && pageUrl && !pageUrl.startsWith('chrome://')) {
+    srcToTry = getFaviconUrl(pageUrl, 64);
+  } else if (errorCount <= 1 && originalSrc) {
+    srcToTry = originalSrc;
+  }
+
+  if (!srcToTry) {
+    return <Globe size={fallbackSize} className={fallbackClassName} />;
+  }
+  
+  return <img src={srcToTry} className={className} alt="" onError={() => setErrorCount(c => c + 1)} />;
+};
+
 export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnterAnim = true }: TabCardProps) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   
@@ -67,11 +91,13 @@ export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnter
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
-              {tab.favIconUrl ? (
-                <img src={tab.favIconUrl} className="w-12 h-12 opacity-30 grayscale" alt="" />
-              ) : (
-                <Globe className="w-12 h-12 text-white/10" />
-              )}
+              <FaviconImage 
+                pageUrl={tab.url}
+                originalSrc={tab.favIconUrl} 
+                className="w-12 h-12 opacity-30 grayscale" 
+                fallbackClassName="text-white/10" 
+                fallbackSize={48} 
+              />
             </div>
           )}
         </div>
@@ -79,11 +105,13 @@ export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnter
         {/* Footer Area */}
         <div className="p-3 flex items-center gap-3 bg-[#242424] flex-1">
           <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-sm bg-white/5">
-            {tab.favIconUrl ? (
-              <img src={tab.favIconUrl} alt="" className="w-full h-full object-contain" />
-            ) : (
-              <Globe className="w-3.5 h-3.5 text-white/50" />
-            )}
+            <FaviconImage 
+              pageUrl={tab.url}
+              originalSrc={tab.favIconUrl} 
+              className="w-4 h-4 object-contain" 
+              fallbackClassName="text-white/50" 
+              fallbackSize={14} 
+            />
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center">
             <h3 className="text-[13px] font-medium text-white truncate leading-tight">
