@@ -1,13 +1,34 @@
 import { captureTabById } from '../lib/thumbnailCache';
 
+async function openOverview() {
+  const overviewUrl = chrome.runtime.getURL("overview/index.html");
+  
+  // Check if the overview is already open
+  const tabs = await chrome.tabs.query({ url: overviewUrl });
+  if (tabs.length > 0) {
+    // Toggle: Close the existing window if it's already open
+    const tab = tabs[0];
+    if (tab.windowId) {
+      await chrome.windows.remove(tab.windowId);
+    }
+    return;
+  }
+
+  chrome.windows.create({
+    url: overviewUrl,
+    type: "popup",
+    state: "fullscreen"
+  });
+}
+
 chrome.commands.onCommand.addListener((command) => {
   if (command === 'open-overview') {
-    chrome.windows.create({
-      url: "overview/index.html",
-      type: "popup",
-      state: "fullscreen"
-    });
+    openOverview();
   }
+});
+
+chrome.action.onClicked.addListener(() => {
+  openOverview();
 });
 
 // Capture thumbnail when a tab finishes loading
@@ -21,12 +42,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 // Capture thumbnail when user switches to a tab
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  const tab = await chrome.tabs.get(activeInfo.tabId);
-  if (tab && tab.url && tab.windowId) {
-    // Small delay to let the tab paint
-    setTimeout(() => {
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  chrome.tabs.get(activeInfo.tabId).then(tab => {
+    if (!tab?.url || !tab.active) return;
+    return new Promise<void>(resolve => setTimeout(resolve, 300)).then(() => {
       captureTabById(activeInfo.tabId, tab.windowId, tab.url!);
-    }, 300);
-  }
+    });
+  });
 });

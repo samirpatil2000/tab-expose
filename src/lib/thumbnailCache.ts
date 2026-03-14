@@ -162,7 +162,7 @@ export async function captureTabById(tabId: number, windowId: number, url: strin
 
     // Second check: verify it's STILL active after the async capture
     const tabAfter = await chrome.tabs.get(tabId);
-    if (!tabAfter || !tabAfter.active || tabAfter.url !== url) return;
+    if (!tabAfter || !tabAfter.active || tabAfter.url !== url || tabAfter.windowId !== windowId) return;
 
     const resizedUrl = await resizeThumbnail(dataUrl, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
     const entry: CacheEntry = { dataUrl: resizedUrl, timestamp: Date.now() };

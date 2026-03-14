@@ -12,6 +12,7 @@
     "storage",
     "activeTab"
   ],
+  "action": {},
   "host_permissions": [
     "<all_urls>"
   ],

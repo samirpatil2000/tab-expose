@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { TabInfo } from '../lib/tabManager';
-import { getThumbnail, captureAndStoreThumbnail } from '../lib/thumbnailCache';
+import { getThumbnail } from '../lib/thumbnailCache';
 import { X, Globe } from 'lucide-react';
 
 interface TabCardProps {
@@ -24,16 +24,11 @@ export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnter
   useEffect(() => {
     let mounted = true;
     const loadThumbnail = async () => {
-      let cached = await getThumbnail(tab.url);
-      
-      if (!cached && mounted) {
-        // If not cached, capture it if active or queue it
-        cached = await captureAndStoreThumbnail(tab);
-      }
-      
+      const cached = await getThumbnail(tab.url);
       if (mounted && cached) {
         setThumbnailUrl(cached);
       }
+      // No capture here — background service worker handles all captures
     };
     
     loadThumbnail();

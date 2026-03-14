@@ -30,11 +30,18 @@ export function Overview() {
     return () => { mounted = false; };
   }, []);
 
-  // Update window size
+  // Update window size and handle blur
   useEffect(() => {
     const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    const handleBlur = () => window.close();
+    
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, []);
 
   // Fuzzy search setup
@@ -133,15 +140,28 @@ export function Overview() {
     );
   };
 
+  const handleBackgroundClick = useCallback((e: React.MouseEvent) => {
+    // Only close if we clicked directly on the outer container or spacer, not inside a card or search bar
+    if (e.target === e.currentTarget) {
+      window.close();
+    }
+  }, []);
+
   return (
-    <div className="flex flex-col h-screen w-full bg-[#1A1A1A] text-white overflow-hidden p-6 font-sans">
+    <div 
+      className="flex flex-col h-screen w-full bg-[#1A1A1A] text-white overflow-hidden p-6 font-sans"
+      onClick={handleBackgroundClick}
+    >
       <SearchBar 
         query={query} 
         onQueryChange={handleQueryChange} 
         inputRef={searchInputRef}
       />
       
-      <div className="flex-1 w-full mx-auto max-w-[1600px] outline-none">
+      <div 
+        className="flex-1 w-full mx-auto max-w-[1600px] outline-none"
+        onClick={handleBackgroundClick}
+      >
         {filteredTabs.length > 0 ? (
           <Grid
             ref={gridRef}
