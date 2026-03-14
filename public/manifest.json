@@ -14,7 +14,20 @@
     "tabCapture",
     "favicon"
   ],
-  "action": {},
+  "icons": {
+    "16": "mosaic-logo.svg",
+    "32": "mosaic-logo.svg",
+    "48": "mosaic-logo.svg",
+    "128": "mosaic-logo.svg"
+  },
+  "action": {
+    "default_icon": {
+      "16": "mosaic-logo.svg",
+      "32": "mosaic-logo.svg",
+      "48": "mosaic-logo.svg",
+      "128": "mosaic-logo.svg"
+    }
+  },
   "host_permissions": [
     "<all_urls>"
   ],
