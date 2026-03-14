@@ -62,7 +62,9 @@ export function Overview() {
   const handleSelect = useCallback((index: number) => {
     const tab = filteredTabs[index];
     if (tab) {
-      switchToTab(tab.id, tab.windowId);
+      switchToTab(tab.id, tab.windowId).then(() => {
+        window.close(); // Close the overview window after switching
+      });
     }
   }, [filteredTabs]);
 
