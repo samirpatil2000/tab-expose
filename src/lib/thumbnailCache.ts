@@ -2,8 +2,8 @@ import { get, set, del, keys } from 'idb-keyval';
 import type { TabInfo } from './tabManager';
 
 const MAX_THUMBNAILS = 500;
-const THUMBNAIL_WIDTH = 320;
-const THUMBNAIL_HEIGHT = 200;
+const THUMBNAIL_WIDTH = 640;
+const THUMBNAIL_HEIGHT = 400;
 
 interface CacheEntry {
   dataUrl: string;
@@ -52,7 +52,7 @@ async function resizeThumbnail(dataUrl: string, width: number, height: number): 
 
     ctx.drawImage(bitmap, offsetX, offsetY, drawWidth, drawHeight);
     
-    const outBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.6 });
+    const outBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
@@ -126,7 +126,7 @@ export async function captureAndStoreThumbnail(tab: TabInfo): Promise<string | n
   try {
     const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
       format: "jpeg",
-      quality: 60
+      quality: 85
     });
     
     if (!dataUrl) return null;
@@ -160,7 +160,7 @@ export async function captureTabById(tabId: number, windowId: number, url: strin
 
     const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
       format: "jpeg",
-      quality: 60
+      quality: 85
     });
     
     if (!dataUrl) return;
