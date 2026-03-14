@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Exposé",
+  "version": "1.0.0",
+  "description": "Fast keyboard-driven tab overview interface with thumbnails",
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "tabs",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "commands": {
+    "open-overview": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Open Tab Exposé Overview"
+    }
+  }
+}
