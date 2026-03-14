@@ -12,6 +12,29 @@ const MIN_CARD_WIDTH = 260;
 const CARD_HEIGHT = 220; // Thumbnail 160 + footer 60
 const MAX_SEARCH_RESULTS = 300;
 
+// Render Grid Cell outside to prevent inline re-render bugs
+const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
+  const { filteredTabs, columns, selectedIndex, query, handleSelect, handleCloseTab } = data;
+  const index = rowIndex * columns + columnIndex;
+  if (index >= filteredTabs.length) return null;
+  
+  const tab = filteredTabs[index];
+  
+  return (
+    <TabCard
+      tab={tab}
+      isSelected={index === selectedIndex}
+      style={style}
+      isEnterAnim={!query} // Only animate on initial load, not search filter
+      onClick={() => handleSelect(index)}
+      onClose={(e) => {
+        e.stopPropagation();
+        handleCloseTab(index);
+      }}
+    />
+  );
+};
+
 export function Overview() {
   const [tabs, setTabs] = useState<TabInfo[]>([]);
   const [query, setQuery] = useState('');
@@ -21,26 +44,45 @@ export function Overview() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
 
-  // Initial load
+  // Initial load and listen for tab changes
   useEffect(() => {
     let mounted = true;
-    getAllTabs().then(res => {
-      if (mounted) setTabs(res);
-    });
-    return () => { mounted = false; };
+    
+    const fetchTabs = () => {
+      getAllTabs().then(res => {
+        if (mounted) setTabs(res);
+      });
+    };
+
+    fetchTabs();
+
+    // Listen for tab movements (dragging to reposition or change windows)
+    chrome.tabs.onMoved.addListener(fetchTabs);
+    chrome.tabs.onDetached.addListener(fetchTabs);
+    chrome.tabs.onAttached.addListener(fetchTabs);
+    chrome.tabs.onCreated.addListener(fetchTabs);
+    chrome.tabs.onRemoved.addListener(fetchTabs);
+    chrome.tabs.onUpdated.addListener(fetchTabs);
+
+    return () => { 
+      mounted = false; 
+      chrome.tabs.onMoved.removeListener(fetchTabs);
+      chrome.tabs.onDetached.removeListener(fetchTabs);
+      chrome.tabs.onAttached.removeListener(fetchTabs);
+      chrome.tabs.onCreated.removeListener(fetchTabs);
+      chrome.tabs.onRemoved.removeListener(fetchTabs);
+      chrome.tabs.onUpdated.removeListener(fetchTabs);
+    };
   }, []);
 
-  // Update window size and handle blur
+  // Update window size
   useEffect(() => {
     const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    const handleBlur = () => window.close();
     
     window.addEventListener('resize', handleResize);
-    window.addEventListener('blur', handleBlur);
     
     return () => {
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('blur', handleBlur);
     };
   }, []);
 
@@ -117,28 +159,15 @@ export function Overview() {
     gridRef.current?.scrollToItem({ rowIndex: 0, columnIndex: 0 });
   };
 
-  // Render Grid Cell
-  const Cell = ({ columnIndex, rowIndex, style }: any) => {
-    const index = rowIndex * columns + columnIndex;
-    if (index >= filteredTabs.length) return null;
-    
-    const tab = filteredTabs[index];
-    
-    return (
-      <TabCard
-        key={tab.id}
-        tab={tab}
-        isSelected={index === selectedIndex}
-        style={style}
-        isEnterAnim={!query} // Only animate on initial load, not search filter
-        onClick={() => handleSelect(index)}
-        onClose={(e) => {
-          e.stopPropagation();
-          handleCloseTab(index);
-        }}
-      />
-    );
-  };
+  // Item dependencies for react-window to detect changes
+  const itemData = useMemo(() => ({
+    filteredTabs,
+    columns,
+    selectedIndex,
+    query,
+    handleSelect,
+    handleCloseTab
+  }), [filteredTabs, columns, selectedIndex, query, handleSelect, handleCloseTab]);
 
   const handleBackgroundClick = useCallback((e: React.MouseEvent) => {
     // Only close if we clicked directly on the outer container or spacer, not inside a card or search bar
@@ -173,6 +202,7 @@ export function Overview() {
             width={availableWidth}
             height={availableHeight}
             innerElementType="div"
+            itemData={itemData}
           >
             {Cell}
           </Grid>
