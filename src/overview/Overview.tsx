@@ -44,6 +44,7 @@ export function Overview() {
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
+  const initialLoadDone = useRef(false);
 
   // Initial load and listen for tab changes
   useEffect(() => {
@@ -51,7 +52,23 @@ export function Overview() {
     
     const fetchTabs = () => {
       getAllTabs().then(res => {
-        if (mounted) setTabs(res);
+        if (!mounted) return;
+        setTabs(res);
+        
+        if (!initialLoadDone.current && res.length > 0) {
+          const activeIdx = res.findIndex(t => t.active);
+          if (activeIdx !== -1) {
+            setSelectedIndex(activeIdx);
+            setTimeout(() => {
+              const paddingX = 24;
+              const availableWidth = window.innerWidth - (paddingX * 2);
+              const cols = Math.max(1, Math.floor(availableWidth / MIN_CARD_WIDTH));
+              const targetRow = Math.floor(activeIdx / cols);
+              gridRef.current?.scrollToItem({ align: 'auto', rowIndex: targetRow, columnIndex: 0 });
+            }, 100);
+          }
+          initialLoadDone.current = true;
+        }
       });
     };
 
