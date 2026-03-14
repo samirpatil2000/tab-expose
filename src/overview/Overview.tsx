@@ -14,7 +14,7 @@ const MAX_SEARCH_RESULTS = 300;
 
 // Render Grid Cell outside to prevent inline re-render bugs
 const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
-  const { filteredTabs, columns, selectedIndex, query, handleSelect, handleCloseTab } = data;
+  const { filteredTabs, columns, selectedIndex, query, handleSelect, handleHighlight, handleCloseTab } = data;
   const index = rowIndex * columns + columnIndex;
   if (index >= filteredTabs.length) return null;
   
@@ -26,7 +26,8 @@ const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
       isSelected={index === selectedIndex}
       style={style}
       isEnterAnim={!query} // Only animate on initial load, not search filter
-      onClick={() => handleSelect(index)}
+      onClick={() => handleHighlight(index)}
+      onDoubleClick={() => handleSelect(index)}
       onClose={(e) => {
         e.stopPropagation();
         handleCloseTab(index);
@@ -107,7 +108,7 @@ export function Overview() {
   const rows = Math.ceil(filteredTabs.length / columns);
   const availableHeight = windowSize.height - paddingY * 2 - 80; // 80px for search bar
 
-  // Keyboard Navigation
+  // Keyboard Navigation / Mouse Double Click
   const handleSelect = useCallback((index: number) => {
     const tab = filteredTabs[index];
     if (tab) {
@@ -116,6 +117,11 @@ export function Overview() {
       });
     }
   }, [filteredTabs]);
+
+  // Mouse Single Click
+  const handleHighlight = useCallback((index: number) => {
+    setSelectedIndex(index);
+  }, []);
 
   const handleCloseTab = useCallback((index: number) => {
     const tab = filteredTabs[index];
@@ -166,8 +172,9 @@ export function Overview() {
     selectedIndex,
     query,
     handleSelect,
+    handleHighlight,
     handleCloseTab
-  }), [filteredTabs, columns, selectedIndex, query, handleSelect, handleCloseTab]);
+  }), [filteredTabs, columns, selectedIndex, query, handleSelect, handleHighlight, handleCloseTab]);
 
   const handleBackgroundClick = useCallback((e: React.MouseEvent) => {
     // Only close if we clicked directly on the outer container or spacer, not inside a card or search bar
