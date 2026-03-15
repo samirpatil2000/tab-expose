@@ -212,9 +212,23 @@ export function Overview() {
       />
       
       <div 
-        className="flex-1 w-full mx-auto max-w-[1600px] outline-none"
+        className="flex-1 w-full mx-auto max-w-[1600px] outline-none flex flex-col"
         onClick={handleBackgroundClick}
       >
+        <div className="flex justify-between items-center mb-5 px-3">
+          <div className="text-[12px] font-medium text-white/40 tracking-wider uppercase">
+            {filteredTabs.length} Tabs
+          </div>
+          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg ring-1 ring-black/20">
+            <span className="text-[12px] font-medium text-white/40 tracking-wide">Dismiss</span>
+            <div className="flex items-center gap-1">
+              <kbd className="flex items-center justify-center min-w-[22px] h-[22px] rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">⌘</kbd>
+              <kbd className="flex items-center justify-center min-w-[22px] h-[22px] rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">⇧</kbd>
+              <kbd className="flex items-center justify-center min-w-[22px] h-[22px] rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">Y</kbd>
+            </div>
+          </div>
+        </div>
+
         {filteredTabs.length > 0 ? (
           <Grid
             ref={gridRef}

@@ -18,11 +18,11 @@ A fast, keyboard-driven tab overview interface for your browser. Find, manage, a
 
 ## ⌨️ Shortcuts
 
-- **Open Mosaic:** `Command+Shift+Y` (Mac) / `Ctrl+Shift+Y` (Windows/Linux)
+- **Summon & Dismiss:** `Command+Shift+Y` (Mac) / `Ctrl+Shift+Y` (Windows/Linux). *Press once to reveal your digital workspace. Press again to seamlessly glide back to your active tab.*
 - **Navigate Grid:** Arrow Keys (`↑`, `↓`, `←`, `→`)
 - **Switch to Tab:** `Enter` or Double-click
 - **Close Tab:** Mouse hover + click the `X` button
-- **Search:** Begin typing anywhere to focus the search bar
+- **Global Search:** Begin typing anywhere to instantly focus the search bar
 
 > [!TIP]
 > You can manually customize or fix these shortcuts by navigating to `chrome://extensions/shortcuts` in your browser.

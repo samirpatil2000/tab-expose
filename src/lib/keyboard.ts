@@ -33,8 +33,15 @@ export function useKeyboardNavigation({
       return;
     }
 
+    // CMD+SHIFT+Y or CMD+SHIFT+M (or CTRL) to toggle close
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key.toLowerCase() === 'y' || e.key.toLowerCase() === 'm')) {
+      e.preventDefault();
+      onCloseOverview?.();
+      return;
+    }
+
     // CMD+F or CTRL+F
-    if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
       e.preventDefault();
       onFocusSearch?.();
       return;
