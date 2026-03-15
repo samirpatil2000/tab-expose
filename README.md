@@ -16,6 +16,15 @@ A fast, keyboard-driven tab overview interface for your browser. Find, manage, a
 - **Tab Management:** Close unwanted tabs directly from the interface without losing your place.
 - **Modern UI/UX:** Built with React, Tailwind CSS, and Framer Motion for a sleek, responsive, and native-feeling experience.
 
+## 🖼️ Screenshots And Demo
+
+<img width="1260" height="880" alt="Image" src="https://github.com/user-attachments/assets/64cef12f-e239-4186-b8c7-72ca34e4b61f" />
+
+___ 
+
+https://github.com/user-attachments/assets/3621cef0-aa60-46ac-851a-a196885515ef
+
+
 ## ⌨️ Shortcuts
 
 - **Summon & Dismiss:** `Command+Shift+Y` (Mac) / `Ctrl+Shift+Y` (Windows/Linux). *Press once to reveal your digital workspace. Press again to seamlessly glide back to your active tab.*
