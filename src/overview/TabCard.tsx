@@ -11,6 +11,7 @@ interface TabCardProps {
   onClick: (e: React.MouseEvent) => void;
   onClose: (e: React.MouseEvent) => void;
   isEnterAnim?: boolean;
+  enterDelay?: number;
 }
 
 const getFaviconUrl = (u: string, size: number) => {
@@ -37,7 +38,7 @@ const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fall
   return <img src={srcToTry} className={className} alt="" onError={() => setErrorCount(c => c + 1)} />;
 };
 
-export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnterAnim = true }: TabCardProps) => {
+export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnterAnim = true, enterDelay = 0 }: TabCardProps) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   
   // Extract domain simply
@@ -65,13 +66,18 @@ export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnter
       className="p-2" // Padding inside the grid cell for gap
       initial={isEnterAnim ? { opacity: 0, scale: 0.96 } : false}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.18 }}
+      transition={{ type: "spring", stiffness: 280, damping: 24, delay: enterDelay }}
     >
-      <div 
+      <motion.div 
         onClick={onClick}
-        className={`relative flex flex-col h-full bg-[#1e1e1e] rounded-[14px] overflow-hidden cursor-pointer group shadow-[0_8px_30px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition-all duration-150 ease-out select-none
-          ${isSelected ? 'ring-2 ring-[#4c9aff]' : 'ring-1 ring-white/5'}
-        `}
+        animate={{
+          scale: isSelected ? 1.03 : 1,
+          boxShadow: isSelected
+            ? '0 0 0 2px #4c9aff, 0 12px 40px rgba(0,0,0,0.4)'
+            : '0 8px 30px rgba(0,0,0,0.25)'
+        }}
+        transition={{ type: "spring", stiffness: 400, damping: 28 }}
+        className="relative flex flex-col h-full bg-[#1e1e1e] rounded-[14px] overflow-hidden cursor-pointer group hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition-[opacity,transform] duration-[320ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.02] select-none"
       >
         {/* Close Button */}
         <button
@@ -127,7 +133,7 @@ export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnter
             <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#4c9aff] shadow-[0_0_8px_#4c9aff]" title="Active Tab"></div>
           )}
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 });

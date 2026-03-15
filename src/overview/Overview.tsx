@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { FixedSizeGrid as Grid } from 'react-window';
 import Fuse from 'fuse.js';
 import { getAllTabs, switchToTab, closeTab as apiCloseTab } from '../lib/tabManager';
@@ -26,6 +27,7 @@ const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
       isSelected={index === selectedIndex}
       style={style}
       isEnterAnim={!query} // Only animate on initial load, not search filter
+      enterDelay={Math.min(index * 0.03, 0.18)}
       onClick={(e) => handleHighlight(index, e)}
       onClose={(e) => {
         e.stopPropagation();
@@ -40,6 +42,7 @@ export function Overview() {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [isExiting, setIsExiting] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
@@ -124,13 +127,16 @@ export function Overview() {
   const rows = Math.ceil(filteredTabs.length / columns);
   const availableHeight = windowSize.height - paddingY * 2 - 80; // 80px for search bar
 
-  // Keyboard Navigation / Mouse Double Click
+  // Keyboard Navigation / Mouse Click
   const handleSelect = useCallback((index: number) => {
     const tab = filteredTabs[index];
     if (tab) {
-      switchToTab(tab.id, tab.windowId).then(() => {
-        window.close(); // Close the overview window after switching
-      });
+      setIsExiting(true);
+      setTimeout(() => {
+        switchToTab(tab.id, tab.windowId).then(() => {
+          window.close(); // Close the overview window after switching
+        });
+      }, 120);
     }
   }, [filteredTabs]);
 
@@ -159,7 +165,8 @@ export function Overview() {
   }, []);
 
   const handleCloseOverview = useCallback(() => {
-    window.close(); // Only works if opened by background script, or we can just window.close() since it's a popup
+    setIsExiting(true);
+    setTimeout(() => window.close(), 120);
   }, []);
 
   useKeyboardNavigation({
@@ -204,7 +211,9 @@ export function Overview() {
   }, []);
 
   return (
-    <div 
+    <motion.div 
+      animate={isExiting ? { opacity: 0, scale: 0.97, filter: 'blur(4px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      transition={{ duration: 0.12, ease: [0.4, 0, 0.2, 1] }}
       className="flex flex-col h-screen w-full bg-[#1A1A1A] text-white overflow-hidden p-6 font-sans"
       onClick={handleBackgroundClick}
     >
@@ -253,6 +262,6 @@ export function Overview() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
