@@ -20,7 +20,7 @@ A fast, keyboard-driven tab overview interface for your browser. Find, manage, a
 
 - **Summon & Dismiss:** `Command+Shift+Y` (Mac) / `Ctrl+Shift+Y` (Windows/Linux). *Press once to reveal your digital workspace. Press again to seamlessly glide back to your active tab.*
 - **Navigate Grid:** Arrow Keys (`↑`, `↓`, `←`, `→`)
-- **Switch to Tab:** `Enter` or Double-click
+- **Switch to Tab:** `Enter` or single-click an already highlighted card.
 - **Close Tab:** Mouse hover + click the `X` button
 - **Global Search:** Begin typing anywhere to instantly focus the search bar
 

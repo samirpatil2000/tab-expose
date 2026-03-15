@@ -26,8 +26,7 @@ const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
       isSelected={index === selectedIndex}
       style={style}
       isEnterAnim={!query} // Only animate on initial load, not search filter
-      onClick={() => handleHighlight(index)}
-      onDoubleClick={() => handleSelect(index)}
+      onClick={(e) => handleHighlight(index, e)}
       onClose={(e) => {
         e.stopPropagation();
         handleCloseTab(index);
@@ -135,10 +134,14 @@ export function Overview() {
     }
   }, [filteredTabs]);
 
-  // Mouse Single Click
-  const handleHighlight = useCallback((index: number) => {
-    setSelectedIndex(index);
-  }, []);
+  // Mouse Click
+  const handleHighlight = useCallback((index: number, e?: React.MouseEvent) => {
+    if (index === selectedIndex) {
+      handleSelect(index); // If already selected, open it
+    } else {
+      setSelectedIndex(index); // Otherwise, select it
+    }
+  }, [selectedIndex, handleSelect]);
 
   const handleCloseTab = useCallback((index: number) => {
     const tab = filteredTabs[index];

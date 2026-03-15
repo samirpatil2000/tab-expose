@@ -8,8 +8,7 @@ interface TabCardProps {
   tab: TabInfo;
   isSelected: boolean;
   style: React.CSSProperties;
-  onClick: () => void;
-  onDoubleClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   onClose: (e: React.MouseEvent) => void;
   isEnterAnim?: boolean;
 }
@@ -38,7 +37,7 @@ const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fall
   return <img src={srcToTry} className={className} alt="" onError={() => setErrorCount(c => c + 1)} />;
 };
 
-export const TabCard = memo(({ tab, isSelected, style, onClick, onDoubleClick, onClose, isEnterAnim = true }: TabCardProps) => {
+export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnterAnim = true }: TabCardProps) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   
   // Extract domain simply
@@ -70,7 +69,6 @@ export const TabCard = memo(({ tab, isSelected, style, onClick, onDoubleClick, o
     >
       <div 
         onClick={onClick}
-        onDoubleClick={onDoubleClick}
         className={`relative flex flex-col h-full bg-[#1e1e1e] rounded-[14px] overflow-hidden cursor-pointer group shadow-[0_8px_30px_rgba(0,0,0,0.25)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition-all duration-150 ease-out select-none
           ${isSelected ? 'ring-2 ring-[#4c9aff]' : 'ring-1 ring-white/5'}
         `}
