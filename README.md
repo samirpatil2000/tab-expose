@@ -18,7 +18,7 @@ A fast, keyboard-driven tab overview interface for your browser. Find, manage, a
 
 ## 🖼️ Screenshots And Demo
 
-<img width="1260" height="880" alt="Image" src="https://github.com/user-attachments/assets/64cef12f-e239-4186-b8c7-72ca34e4b61f" />
+<img width="1438" height="893" alt="Image" src="https://github.com/user-attachments/assets/91004dae-acfd-49ce-9a6b-53d66d1a2834" />
 
 ___ 
 
