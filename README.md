@@ -24,6 +24,7 @@ A fast, keyboard-driven tab overview interface for your browser. Find, manage, a
 - **Close Tab:** Mouse hover + click the `X` button
 - **Search:** Begin typing anywhere to focus the search bar
 
+
 ## 🚀 Installation & Development
 
 Mosaic is built as a highly optimized Vite extension project using React and TypeScript.
@@ -37,7 +38,7 @@ Mosaic is built as a highly optimized Vite extension project using React and Typ
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/mosaic.git
+   git clone https://github.com/samirpatil2000/mosaic.git
    cd mosaic
    ```
 
