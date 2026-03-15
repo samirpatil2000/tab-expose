@@ -32,7 +32,7 @@
     "<all_urls>"
   ],
   "commands": {
-    "open-overview": {
+    "_execute_action": {
       "suggested_key": {
         "default": "Ctrl+Shift+Y",
         "mac": "Command+Shift+Y"

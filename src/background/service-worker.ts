@@ -1,15 +1,26 @@
 import { captureTabById } from '../lib/thumbnailCache';
 
+let lastToggleTime = 0;
+
 async function openOverview() {
+  const now = Date.now();
+  if (now - lastToggleTime < 500) return; // Debounce triggers
+  lastToggleTime = now;
+
   const overviewUrl = chrome.runtime.getURL("overview/index.html");
   
-  // Check if the overview is already open
-  const tabs = await chrome.tabs.query({ url: overviewUrl });
-  if (tabs.length > 0) {
-    // Toggle: Close the existing window if it's already open
-    const tab = tabs[0];
-    if (tab.windowId) {
-      await chrome.windows.remove(tab.windowId);
+  // Find all windows to see if any contain our overview page
+  // We use includes() to be extra safe with URL matching
+  const windows = await chrome.windows.getAll({ populate: true });
+  const existingWindow = windows.find(win => 
+    win.tabs?.some(t => t.url && t.url.includes(overviewUrl))
+  );
+
+  if (existingWindow && existingWindow.id) {
+    try {
+      await chrome.windows.remove(existingWindow.id);
+    } catch (e) {
+      console.error('Failed to close window:', e);
     }
     return;
   }
@@ -22,7 +33,7 @@ async function openOverview() {
 }
 
 chrome.commands.onCommand.addListener((command) => {
-  if (command === 'open-overview') {
+  if (command === '_execute_action' || command === 'open-overview') {
     openOverview();
   }
 });
