@@ -69,6 +69,16 @@ Mosaic is built as a highly optimized Vite extension project using React and Typ
    - Click **Load unpacked** in the top left.
    - Select the `dist` folder located in the project directory.
 
+### Packaging for Distribution
+
+If you want to create a shareable `.zip` file that others can install via "Load unpacked", we provide a convenience script that automatically builds and zips the project.
+
+Run the following command from the project root:
+```bash
+sh build_and_pack.sh
+```
+This will generate a `mosaic-extension.zip` file ready to be shared.
+
 ## 🛠️ Tech Stack
 
 - **Framework:** React 19 + TypeScript
