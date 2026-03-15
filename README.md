@@ -73,6 +73,12 @@ Mosaic is built as a highly optimized Vite extension project using React and Typ
 
 Contributions, issues, and feature requests are always welcome! Whether it's a bug report or a new feature idea, feel free to open an issue or submit a pull request.
 
+## 🔒 Privacy Policy
+
+Mosaic respects your privacy. All processing and thumbnail generation happens locally on your machine. No browsing data, history, or personal information is ever collected, transmitted, or sold.
+
+Read the full [Privacy Policy](PRIVACY.md).
+
 ## 📝 License
 
 This project is open-source and available under the [MIT License](LICENSE).
