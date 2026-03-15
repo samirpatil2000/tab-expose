@@ -24,6 +24,8 @@ A fast, keyboard-driven tab overview interface for your browser. Find, manage, a
 - **Close Tab:** Mouse hover + click the `X` button
 - **Search:** Begin typing anywhere to focus the search bar
 
+> [!TIP]
+> You can manually customize or fix these shortcuts by navigating to `chrome://extensions/shortcuts` in your browser.
 
 ## 🚀 Installation & Development
 
