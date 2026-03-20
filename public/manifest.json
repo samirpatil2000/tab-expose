@@ -9,9 +9,7 @@
   },
   "permissions": [
     "tabs",
-    "storage",
     "activeTab",
-    "tabCapture",
     "favicon"
   ],
   "icons": {
