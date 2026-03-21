@@ -43,6 +43,7 @@ export function Overview() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [isExiting, setIsExiting] = useState(false);
+  const [shortcutKeys, setShortcutKeys] = useState<string[]>(['⌘', '⇧', 'Y']);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
@@ -104,6 +105,25 @@ export function Overview() {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
+  }, []);
+
+  // Fetch extension keyboard shortcut
+  useEffect(() => {
+    if (chrome?.commands?.getAll) {
+      chrome.commands.getAll((commands) => {
+        const action = commands.find(c => c.name === '_execute_action');
+        if (action?.shortcut) {
+          const keys = action.shortcut.split('+').map(part => {
+            if (part === 'Command' || part === 'MacCtrl') return '⌘';
+            if (part === 'Shift') return '⇧';
+            if (part === 'Alt') return '⌥';
+            if (part === 'Ctrl') return '⌃';
+            return part.toUpperCase();
+          });
+          setShortcutKeys(keys);
+        }
+      });
+    }
   }, []);
 
   // Fuzzy search setup
@@ -234,9 +254,11 @@ export function Overview() {
           <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg ring-1 ring-black/20">
             <span className="text-[12px] font-medium text-white/40 tracking-wide">Dismiss</span>
             <div className="flex items-center gap-1">
-              <kbd className="flex items-center justify-center min-w-[22px] h-[22px] rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">⌘</kbd>
-              <kbd className="flex items-center justify-center min-w-[22px] h-[22px] rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">⇧</kbd>
-              <kbd className="flex items-center justify-center min-w-[22px] h-[22px] rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">Y</kbd>
+              {shortcutKeys.map((key, i) => (
+                <kbd key={i} className="flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">
+                  {key}
+                </kbd>
+              ))}
             </div>
           </div>
         </div>
