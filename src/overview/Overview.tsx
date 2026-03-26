@@ -43,7 +43,7 @@ export function Overview() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [isExiting, setIsExiting] = useState(false);
-  const [shortcutKeys, setShortcutKeys] = useState<string[]>(['⌘', '⇧', 'Y']);
+  const [shortcutKeys, setShortcutKeys] = useState<string[]>(['⌘', '⇧', '.']);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
@@ -118,6 +118,8 @@ export function Overview() {
             if (part === 'Shift') return '⇧';
             if (part === 'Alt') return '⌥';
             if (part === 'Ctrl') return '⌃';
+            if (part === 'Period') return '.';
+            if (part === 'Comma') return ',';
             return part.toUpperCase();
           });
           setShortcutKeys(keys);
