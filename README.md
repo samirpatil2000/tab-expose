@@ -22,7 +22,8 @@ A fast, keyboard-driven tab overview interface for your browser. Find, manage, a
 
 ___ 
 
-https://github.com/user-attachments/assets/3621cef0-aa60-46ac-851a-a196885515ef
+https://github.com/user-attachments/assets/08a8f47d-d7fe-4076-a6d6-1242ffcd1721
+
 
 
 ## ⌨️ Shortcuts
