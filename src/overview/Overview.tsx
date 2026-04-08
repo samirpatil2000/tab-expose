@@ -5,7 +5,7 @@ import { FixedSizeGrid as Grid } from 'react-window';
 import Fuse from 'fuse.js';
 import { getAllTabs, switchToTab, closeTab as apiCloseTab } from '../lib/tabManager';
 import type { TabInfo } from '../lib/tabManager';
-import { useKeyboardNavigation } from '../lib/keyboard';
+import { useKeyboardNavigation, parseShortcut } from '../lib/keyboard';
 import { TabCard } from './TabCard';
 import { SearchBar } from './SearchBar';
 
@@ -43,7 +43,9 @@ export function Overview() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [isExiting, setIsExiting] = useState(false);
-  const [shortcutKeys, setShortcutKeys] = useState<string[]>(['⌘', '⇧', '.']);
+  const [shortcutKeys, setShortcutKeys] = useState<string[]>(['\u2318', '\u21e7', '.']);
+  const [rawShortcut, setRawShortcut] = useState<string>('');
+  const [debugKey, setDebugKey] = useState<string>('(none yet)');
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
@@ -111,22 +113,43 @@ export function Overview() {
   useEffect(() => {
     if (chrome?.commands?.getAll) {
       chrome.commands.getAll((commands) => {
+        console.log('[Mosaic] commands.getAll:', JSON.stringify(commands));
         const action = commands.find(c => c.name === '_execute_action');
+        console.log('[Mosaic] _execute_action shortcut:', action?.shortcut);
         if (action?.shortcut) {
           const keys = action.shortcut.split('+').map(part => {
-            if (part === 'Command' || part === 'MacCtrl') return '⌘';
-            if (part === 'Shift') return '⇧';
-            if (part === 'Alt') return '⌥';
-            if (part === 'Ctrl') return '⌃';
+            if (part === 'Command' || part === 'MacCtrl') return '\u2318';
+            if (part === 'Shift') return '\u21e7';
+            if (part === 'Alt') return '\u2325';
+            if (part === 'Ctrl') return '\u2303';
             if (part === 'Period') return '.';
             if (part === 'Comma') return ',';
             return part.toUpperCase();
           });
           setShortcutKeys(keys);
+          setRawShortcut(action.shortcut);
+        } else {
+          setShortcutKeys([]);
+          setRawShortcut('');
         }
       });
     }
   }, []);
+
+  // DEBUG: capture last keydown event for diagnosing shortcut mismatch
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
+        setDebugKey(
+          `key="${e.key}" code="${e.code}" meta=${e.metaKey} ctrl=${e.ctrlKey} shift=${e.shiftKey} alt=${e.altKey}`
+        );
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const closeShortcut = useMemo(() => rawShortcut ? parseShortcut(rawShortcut) : null, [rawShortcut]);
 
   // Fuzzy search setup
   const fuse = useMemo(() => new Fuse(tabs, {
@@ -191,6 +214,13 @@ export function Overview() {
     setTimeout(() => window.close(), 120);
   }, []);
 
+  const handleOpenShortcutSettings = useCallback(async () => {
+    const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    const target = windows.at(-1);
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts', windowId: target?.id });
+    window.close();
+  }, []);
+
   useKeyboardNavigation({
     totalItems: filteredTabs.length,
     columns,
@@ -204,7 +234,8 @@ export function Overview() {
     onSelect: handleSelect,
     onCloseTab: handleCloseTab,
     onFocusSearch: handleFocusSearch,
-    onCloseOverview: handleCloseOverview
+    onCloseOverview: handleCloseOverview,
+    closeShortcut
   });
 
   // Handle Query change
@@ -253,14 +284,22 @@ export function Overview() {
           <div className="text-[12px] font-medium text-white/40 tracking-wider uppercase">
             {filteredTabs.length} Tabs
           </div>
-          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg ring-1 ring-black/20">
+          <div 
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg ring-1 ring-black/20 cursor-pointer hover:bg-white/10 transition-colors"
+            onClick={handleOpenShortcutSettings}
+            title="Click to change shortcut"
+          >
             <span className="text-[12px] font-medium text-white/40 tracking-wide">Dismiss</span>
             <div className="flex items-center gap-1">
-              {shortcutKeys.map((key, i) => (
-                <kbd key={i} className="flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">
-                  {key}
-                </kbd>
-              ))}
+              {shortcutKeys.length === 0 ? (
+                <span className="text-[12px] text-[#4c9aff]">Set shortcut</span>
+              ) : (
+                shortcutKeys.map((key, i) => (
+                  <kbd key={i} className="flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">
+                    {key}
+                  </kbd>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -285,6 +324,13 @@ export function Overview() {
             <p>No tabs found for "{query}"</p>
           </div>
         )}
+      </div>
+
+      {/* DEBUG OVERLAY – remove after fixing */}
+      <div style={{ position: 'fixed', bottom: 8, left: 8, background: 'rgba(0,0,0,0.85)', color: '#4c9aff', fontFamily: 'monospace', fontSize: 11, padding: '6px 10px', borderRadius: 6, zIndex: 9999, pointerEvents: 'none', maxWidth: '90vw', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+        <b>rawShortcut:</b> "{rawShortcut || '(empty)'}"
+        {'\n'}<b>closeShortcut:</b> {closeShortcut ? JSON.stringify(closeShortcut) : 'null'}
+        {'\n'}<b>last mod+key:</b> {debugKey}
       </div>
     </motion.div>
   );

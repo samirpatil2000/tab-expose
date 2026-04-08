@@ -9,6 +9,83 @@ interface KeyboardNavProps {
   onCloseTab?: (index: number) => void;
   onFocusSearch?: () => void;
   onCloseOverview?: () => void;
+  closeShortcut?: ParsedShortcut | null;
+}
+
+export interface ParsedShortcut {
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  key: string;
+}
+
+export function parseShortcut(shortcut: string): ParsedShortcut {
+  const parsed: ParsedShortcut = {
+    metaKey: false,
+    ctrlKey: false,
+    shiftKey: false,
+    altKey: false,
+    key: ''
+  };
+
+  // Chrome normally returns "Modifier+Key" (e.g. "Alt+Z", "Command+Shift+Period").
+  // But defensively also handle Unicode symbols directly (e.g. "\u2325Z" = "⌥Z").
+  function applyPart(part: string) {
+    switch (part) {
+      case 'Command': case '\u2318': parsed.metaKey = true; break;
+      case 'MacCtrl': case 'Ctrl':   parsed.ctrlKey = true; break;
+      case '\u2303':                 parsed.ctrlKey = true; break;
+      case 'Shift':   case '\u21e7': parsed.shiftKey = true; break;
+      case 'Alt':     case '\u2325': parsed.altKey = true; break;
+      case 'Period':  parsed.key = '.'; break;
+      case 'Comma':   parsed.key = ','; break;
+      case 'Space':   parsed.key = ' '; break;
+      default:
+        if (part.length > 1) {
+          // Could be concatenated unicode modifiers like "⌥Z" with no + separator.
+          for (const char of part) {
+            if (char === '\u2318')      parsed.metaKey = true;
+            else if (char === '\u2325') parsed.altKey = true;
+            else if (char === '\u21e7') parsed.shiftKey = true;
+            else if (char === '\u2303') parsed.ctrlKey = true;
+            else                        parsed.key = char.toLowerCase();
+          }
+        } else {
+          parsed.key = part.toLowerCase();
+        }
+    }
+  }
+
+  shortcut.split('+').forEach(applyPart);
+  return parsed;
+}
+
+/** Derive the layout-independent base key from e.code (unaffected by modifiers). */
+function baseKeyFromCode(code: string): string {
+  if (code.startsWith('Key'))   return code.slice(3).toLowerCase();  // "KeyZ" → "z"
+  if (code.startsWith('Digit')) return code.slice(5);                 // "Digit1" → "1"
+  if (code === 'Period') return '.';
+  if (code === 'Comma')  return ',';
+  if (code === 'Space')  return ' ';
+  return code.toLowerCase();
+}
+
+export function matchesShortcut(e: KeyboardEvent, s: ParsedShortcut): boolean {
+  // Use e.code for key matching — it reflects the PHYSICAL key and is unaffected by
+  // modifier keys. This is critical on Mac where Option/Shift change e.key entirely
+  // (e.g. Option+Z → e.key="Ω", but e.code="KeyZ" always).
+  const keyMatches =
+    e.key.toLowerCase() === s.key ||
+    baseKeyFromCode(e.code) === s.key;
+
+  return (
+    e.metaKey  === s.metaKey  &&
+    e.ctrlKey  === s.ctrlKey  &&
+    e.shiftKey === s.shiftKey &&
+    e.altKey   === s.altKey   &&
+    keyMatches
+  );
 }
 
 export function useKeyboardNavigation({
@@ -19,7 +96,8 @@ export function useKeyboardNavigation({
   onSelect,
   onCloseTab,
   onFocusSearch,
-  onCloseOverview
+  onCloseOverview,
+  closeShortcut
 }: KeyboardNavProps) {
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -33,8 +111,7 @@ export function useKeyboardNavigation({
       return;
     }
 
-    // CMD+SHIFT+Y, CMD+SHIFT+M, or CMD+SHIFT+. (or CTRL) to toggle close
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key.toLowerCase() === 'y' || e.key.toLowerCase() === 'm' || e.key === '.' || e.key === '>')) {
+    if (closeShortcut && matchesShortcut(e, closeShortcut)) {
       e.preventDefault();
       onCloseOverview?.();
       return;
@@ -96,7 +173,7 @@ export function useKeyboardNavigation({
       onIndexChange(nextIndex);
     }
 
-  }, [totalItems, columns, selectedIndex, onIndexChange, onSelect, onCloseTab, onFocusSearch, onCloseOverview]);
+  }, [totalItems, columns, selectedIndex, onIndexChange, onSelect, onCloseTab, onFocusSearch, onCloseOverview, closeShortcut]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
