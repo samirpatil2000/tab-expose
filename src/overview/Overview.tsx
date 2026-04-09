@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { ExternalLink } from 'lucide-react';
 import { FixedSizeGrid as Grid } from 'react-window';
 import Fuse from 'fuse.js';
 import { getAllTabs, switchToTab, closeTab as apiCloseTab } from '../lib/tabManager';
@@ -45,7 +46,6 @@ export function Overview() {
   const [isExiting, setIsExiting] = useState(false);
   const [shortcutKeys, setShortcutKeys] = useState<string[]>(['\u2318', '\u21e7', '.']);
   const [rawShortcut, setRawShortcut] = useState<string>('');
-  const [debugKey, setDebugKey] = useState<string>('(none yet)');
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
@@ -134,19 +134,6 @@ export function Overview() {
         }
       });
     }
-  }, []);
-
-  // DEBUG: capture last keydown event for diagnosing shortcut mismatch
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
-        setDebugKey(
-          `key="${e.key}" code="${e.code}" meta=${e.metaKey} ctrl=${e.ctrlKey} shift=${e.shiftKey} alt=${e.altKey}`
-        );
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   const closeShortcut = useMemo(() => rawShortcut ? parseShortcut(rawShortcut) : null, [rawShortcut]);
@@ -285,21 +272,26 @@ export function Overview() {
             {filteredTabs.length} Tabs
           </div>
           <div 
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg ring-1 ring-black/20 cursor-pointer hover:bg-white/10 transition-colors"
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-2xl ring-1 ring-black/40 cursor-pointer hover:bg-white/[0.08] transition-colors duration-200 group"
             onClick={handleOpenShortcutSettings}
-            title="Click to change shortcut"
+            title="Click to configure shortcut"
           >
-            <span className="text-[12px] font-medium text-white/40 tracking-wide">Dismiss</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5 pl-1">
               {shortcutKeys.length === 0 ? (
-                <span className="text-[12px] text-[#4c9aff]">Set shortcut</span>
+                <span className="text-[12px] text-[#4c9aff] font-medium animate-pulse">Set shortcut</span>
               ) : (
                 shortcutKeys.map((key, i) => (
-                  <kbd key={i} className="flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">
+                  <kbd 
+                    key={i} 
+                    className="flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-[5px] border border-white/15 bg-gradient-to-b from-white/10 to-white/5 text-white/90 text-[10px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md"
+                  >
                     {key}
                   </kbd>
                 ))
               )}
+            </div>
+            <div className="flex items-center justify-center text-white/30 group-hover:text-white/80 transition-colors duration-300 pr-1">
+              <ExternalLink size={14} strokeWidth={2.5} />
             </div>
           </div>
         </div>
@@ -324,13 +316,6 @@ export function Overview() {
             <p>No tabs found for "{query}"</p>
           </div>
         )}
-      </div>
-
-      {/* DEBUG OVERLAY – remove after fixing */}
-      <div style={{ position: 'fixed', bottom: 8, left: 8, background: 'rgba(0,0,0,0.85)', color: '#4c9aff', fontFamily: 'monospace', fontSize: 11, padding: '6px 10px', borderRadius: 6, zIndex: 9999, pointerEvents: 'none', maxWidth: '90vw', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-        <b>rawShortcut:</b> "{rawShortcut || '(empty)'}"
-        {'\n'}<b>closeShortcut:</b> {closeShortcut ? JSON.stringify(closeShortcut) : 'null'}
-        {'\n'}<b>last mod+key:</b> {debugKey}
       </div>
     </motion.div>
   );
