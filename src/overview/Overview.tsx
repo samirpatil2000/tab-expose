@@ -1,11 +1,12 @@
 // @ts-nocheck
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { ExternalLink } from 'lucide-react';
 import { FixedSizeGrid as Grid } from 'react-window';
 import Fuse from 'fuse.js';
 import { getAllTabs, switchToTab, closeTab as apiCloseTab } from '../lib/tabManager';
 import type { TabInfo } from '../lib/tabManager';
-import { useKeyboardNavigation } from '../lib/keyboard';
+import { useKeyboardNavigation, parseShortcut } from '../lib/keyboard';
 import { TabCard } from './TabCard';
 import { SearchBar } from './SearchBar';
 
@@ -43,7 +44,8 @@ export function Overview() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [isExiting, setIsExiting] = useState(false);
-  const [shortcutKeys, setShortcutKeys] = useState<string[]>(['⌘', '⇧', '.']);
+  const [shortcutKeys, setShortcutKeys] = useState<string[]>(['\u2318', '\u21e7', '.']);
+  const [rawShortcut, setRawShortcut] = useState<string>('');
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<any>(null);
@@ -111,22 +113,30 @@ export function Overview() {
   useEffect(() => {
     if (chrome?.commands?.getAll) {
       chrome.commands.getAll((commands) => {
+        console.log('[Mosaic] commands.getAll:', JSON.stringify(commands));
         const action = commands.find(c => c.name === '_execute_action');
+        console.log('[Mosaic] _execute_action shortcut:', action?.shortcut);
         if (action?.shortcut) {
           const keys = action.shortcut.split('+').map(part => {
-            if (part === 'Command' || part === 'MacCtrl') return '⌘';
-            if (part === 'Shift') return '⇧';
-            if (part === 'Alt') return '⌥';
-            if (part === 'Ctrl') return '⌃';
+            if (part === 'Command' || part === 'MacCtrl') return '\u2318';
+            if (part === 'Shift') return '\u21e7';
+            if (part === 'Alt') return '\u2325';
+            if (part === 'Ctrl') return '\u2303';
             if (part === 'Period') return '.';
             if (part === 'Comma') return ',';
             return part.toUpperCase();
           });
           setShortcutKeys(keys);
+          setRawShortcut(action.shortcut);
+        } else {
+          setShortcutKeys([]);
+          setRawShortcut('');
         }
       });
     }
   }, []);
+
+  const closeShortcut = useMemo(() => rawShortcut ? parseShortcut(rawShortcut) : null, [rawShortcut]);
 
   // Fuzzy search setup
   const fuse = useMemo(() => new Fuse(tabs, {
@@ -191,6 +201,13 @@ export function Overview() {
     setTimeout(() => window.close(), 120);
   }, []);
 
+  const handleOpenShortcutSettings = useCallback(async () => {
+    const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    const target = windows.at(-1);
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts', windowId: target?.id });
+    window.close();
+  }, []);
+
   useKeyboardNavigation({
     totalItems: filteredTabs.length,
     columns,
@@ -204,7 +221,8 @@ export function Overview() {
     onSelect: handleSelect,
     onCloseTab: handleCloseTab,
     onFocusSearch: handleFocusSearch,
-    onCloseOverview: handleCloseOverview
+    onCloseOverview: handleCloseOverview,
+    closeShortcut
   });
 
   // Handle Query change
@@ -253,14 +271,27 @@ export function Overview() {
           <div className="text-[12px] font-medium text-white/40 tracking-wider uppercase">
             {filteredTabs.length} Tabs
           </div>
-          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg ring-1 ring-black/20">
-            <span className="text-[12px] font-medium text-white/40 tracking-wide">Dismiss</span>
-            <div className="flex items-center gap-1">
-              {shortcutKeys.map((key, i) => (
-                <kbd key={i} className="flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded border border-white/10 bg-white/10 text-white/80 text-[11px] font-sans shadow-sm backdrop-blur-md">
-                  {key}
-                </kbd>
-              ))}
+          <div 
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-2xl ring-1 ring-black/40 cursor-pointer hover:bg-white/[0.08] transition-colors duration-200 group"
+            onClick={handleOpenShortcutSettings}
+            title="Click to configure shortcut"
+          >
+            <div className="flex items-center gap-1.5 pl-1">
+              {shortcutKeys.length === 0 ? (
+                <span className="text-[12px] text-[#4c9aff] font-medium animate-pulse">Set shortcut</span>
+              ) : (
+                shortcutKeys.map((key, i) => (
+                  <kbd 
+                    key={i} 
+                    className="flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-[5px] border border-white/15 bg-gradient-to-b from-white/10 to-white/5 text-white/90 text-[10px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md"
+                  >
+                    {key}
+                  </kbd>
+                ))
+              )}
+            </div>
+            <div className="flex items-center justify-center text-white/30 group-hover:text-white/80 transition-colors duration-300 pr-1">
+              <ExternalLink size={14} strokeWidth={2.5} />
             </div>
           </div>
         </div>
