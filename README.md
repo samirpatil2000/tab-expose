@@ -28,14 +28,15 @@ https://github.com/user-attachments/assets/08a8f47d-d7fe-4076-a6d6-1242ffcd1721
 
 ## ⌨️ Shortcuts
 
-- **Summon & Dismiss:** `Command+Shift+Y` (Mac) / `Ctrl+Shift+Y` (Windows/Linux). *Press once to reveal your digital workspace. Press again to seamlessly glide back to your active tab.*
+- **Summon & Dismiss:** `Command+Shift+.` (Mac) / `Ctrl+Shift+.` (Windows/Linux). *Press once to reveal your digital workspace. Press again to seamlessly glide back to your active tab.* You can also set your own custom shortcut for opening and closing Mosaic.
 - **Navigate Grid:** Arrow Keys (`↑`, `↓`, `←`, `→`)
 - **Switch to Tab:** `Enter` or single-click an already highlighted card.
 - **Close Tab:** Mouse hover + click the `X` button
 - **Global Search:** Begin typing anywhere to instantly focus the search bar
 
 > [!TIP]
-> You can manually customize or fix these shortcuts by navigating to `chrome://extensions/shortcuts` in your browser.
+> You can manually customize or fix these shortcuts — including the one for opening and closing Mosaic — by navigating to `chrome://extensions/shortcuts` in your browser, or by clicking the redirect icon in Mosaic window.
+
 
 ## 🚀 Installation & Development
 
