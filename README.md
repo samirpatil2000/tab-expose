@@ -22,7 +22,7 @@ A fast, keyboard-driven tab overview for your browser. Find, manage, and switch 
 
 ## 🖼️ Screenshots And Demo
 
-<img width="1438" height="893" alt="Image" src="https://github.com/user-attachments/assets/91004dae-acfd-49ce-9a6b-53d66d1a2834" />
+<img width="1438" height="893" alt="Mosaic overview grid" src="https://github.com/user-attachments/assets/f3e4fe20-3faf-4c5e-a19c-b4508600b3e6" />
 
 ___
 
