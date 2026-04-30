@@ -60,7 +60,6 @@ function computeGridLayout(
     bestCols = 1;
     bestRows = 1;
   } else {
-    const effectiveCount = itemCount % 2 === 1 ? itemCount + 1 : itemCount;
     const maxCols = Math.max(1, Math.floor(availableWidth / MIN_CARD_WIDTH));
 
     bestCols = -1;
@@ -68,7 +67,7 @@ function computeGridLayout(
     let bestScore = -Infinity;
 
     for (let cols = 1; cols <= maxCols; cols++) {
-      const rows = Math.ceil(effectiveCount / cols);
+      const rows = Math.ceil(itemCount / cols);
       const widthFromCols = availableWidth / cols;
       const widthFromRows = availableHeight / (rows * aspectRatio);
       const cardWidth = Math.min(widthFromCols, widthFromRows);
@@ -76,7 +75,9 @@ function computeGridLayout(
       if (cardWidth < MIN_CARD_WIDTH) continue;
 
       const cardHeight = cardWidth * aspectRatio;
-      const usedArea = (cardWidth * cols) * (cardHeight * rows);
+      // Score by area of *actual* cards, not the full grid rectangle.
+      // This naturally penalizes ragged layouts where empty cells waste space.
+      const usedArea = cardWidth * cardHeight * itemCount;
       const viewArea = availableWidth * availableHeight;
       const score = usedArea / viewArea;
 
