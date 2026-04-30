@@ -52,54 +52,57 @@ function computeGridLayout(
 
   const aspectRatio = BASE_CARD_HEIGHT / MIN_CARD_WIDTH;
 
+  let bestCols: number;
+  let bestRows: number;
+
   if (itemCount === 1) {
-    const widthFromHeight = availableHeight / aspectRatio;
-    const cardWidth = Math.max(MIN_CARD_WIDTH, Math.min(availableWidth, widthFromHeight));
-    return { columns: 1, rows: 1, columnWidth: Math.floor(cardWidth), rowHeight: Math.round(cardWidth * aspectRatio) };
-  }
+    bestCols = 1;
+    bestRows = 1;
+  } else {
+    const effectiveCount = itemCount % 2 === 1 ? itemCount + 1 : itemCount;
+    const maxCols = Math.max(1, Math.floor(availableWidth / MIN_CARD_WIDTH));
 
-  const effectiveCount = itemCount % 2 === 1 ? itemCount + 1 : itemCount;
-  const maxCols = Math.max(1, Math.floor(availableWidth / MIN_CARD_WIDTH));
+    bestCols = -1;
+    bestRows = 1;
+    let bestScore = -Infinity;
 
-  let bestCols = -1;
-  let bestCardWidth = MIN_CARD_WIDTH;
-  let bestScore = -Infinity;
+    for (let cols = 1; cols <= maxCols; cols++) {
+      const rows = Math.ceil(effectiveCount / cols);
+      const widthFromCols = availableWidth / cols;
+      const widthFromRows = availableHeight / (rows * aspectRatio);
+      const cardWidth = Math.min(widthFromCols, widthFromRows);
 
-  for (let cols = 1; cols <= maxCols; cols++) {
-    const rows = Math.ceil(effectiveCount / cols);
-    const widthFromCols = availableWidth / cols;
-    const widthFromRows = availableHeight / (rows * aspectRatio);
-    const cardWidth = Math.min(widthFromCols, widthFromRows);
+      if (cardWidth < MIN_CARD_WIDTH) continue;
 
-    if (cardWidth < MIN_CARD_WIDTH) continue;
+      const cardHeight = cardWidth * aspectRatio;
+      const usedArea = (cardWidth * cols) * (cardHeight * rows);
+      const viewArea = availableWidth * availableHeight;
+      const score = usedArea / viewArea;
 
-    const cardHeight = cardWidth * aspectRatio;
-    const usedArea = (cardWidth * cols) * (cardHeight * rows);
-    const viewArea = availableWidth * availableHeight;
-    const score = usedArea / viewArea;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestCols = cols;
-      bestCardWidth = cardWidth;
+      if (score > bestScore) {
+        bestScore = score;
+        bestCols = cols;
+      }
     }
+
+    if (bestCols === -1) {
+      bestCols = Math.max(1, Math.floor(availableWidth / MIN_CARD_WIDTH));
+    }
+
+    bestRows = Math.ceil(itemCount / bestCols);
   }
 
-  if (bestCols === -1) {
-    bestCols = maxCols;
-    bestCardWidth = availableWidth / maxCols;
-  }
+  // Mathematically guaranteed fit:
+  // Floor the cell dimensions so total never exceeds available space.
+  const columnWidth = Math.floor(availableWidth / bestCols);
+  const maxRowHeight = Math.floor(availableHeight / bestRows);
+  const rowHeight = Math.min(Math.floor(columnWidth * aspectRatio), maxRowHeight);
 
-  const columns = bestCols;
-  const rows = Math.ceil(itemCount / columns);
-  const columnWidth = Math.floor(bestCardWidth);
-  const rowHeight = Math.round(columnWidth * aspectRatio);
-
-  return { columns, rows, columnWidth, rowHeight };
+  return { columns: bestCols, rows: bestRows, columnWidth, rowHeight };
 }
 
 const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
-  const { windowTabs, windowStart, columns, globalSelectedIndex, query, uiScale, handleSelect, handleHighlight, handleCloseTab } = data;
+  const { windowTabs, windowStart, columns, columnWidth, globalSelectedIndex, query, uiScale, handleClick, handleHover, handleCloseTab } = data;
   const localIndex = rowIndex * columns + columnIndex;
   if (localIndex >= windowTabs.length) return null;
 
@@ -112,9 +115,11 @@ const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
       isSelected={globalIndex === globalSelectedIndex}
       style={style}
       uiScale={uiScale}
+      columnWidth={columnWidth}
       isEnterAnim={!query}
       enterDelay={Math.min(localIndex * 0.03, 0.18)}
-      onClick={(e) => handleHighlight(globalIndex, e)}
+      onClick={() => handleClick(globalIndex)}
+      onMouseEnter={() => handleHover(globalIndex)}
       onClose={(e) => {
         e.stopPropagation();
         handleCloseTab(globalIndex);
@@ -281,9 +286,15 @@ export function Overview() {
     }
   }, [filteredTabs]);
 
-  const handleHighlight = useCallback((index: number, _e?: React.MouseEvent) => {
+  // Mouse click opens the tab
+  const handleClick = useCallback((index: number) => {
     handleSelect(index);
   }, [handleSelect]);
+
+  // Mouse hover selects the card (unifies with keyboard selection)
+  const handleHover = useCallback((index: number) => {
+    setSelectedIndex(index);
+  }, []);
 
   const handleCloseTab = useCallback((index: number) => {
     const tab = filteredTabs[index];
@@ -348,13 +359,14 @@ export function Overview() {
     windowTabs,
     windowStart,
     columns,
+    columnWidth,
     globalSelectedIndex: selectedIndex,
     query,
     uiScale,
-    handleSelect,
-    handleHighlight,
+    handleClick,
+    handleHover,
     handleCloseTab
-  }), [windowTabs, windowStart, columns, selectedIndex, query, uiScale, handleSelect, handleHighlight, handleCloseTab]);
+  }), [windowTabs, windowStart, columns, columnWidth, selectedIndex, query, uiScale, handleClick, handleHover, handleCloseTab]);
 
   const handleBackgroundClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -421,13 +433,13 @@ export function Overview() {
           <div ref={gridContainerRef} className={`flex-1 flex justify-center overflow-hidden ${rows > 1 ? 'items-center' : 'items-start'}`}>
             <Grid
               ref={gridRef}
-              className="outline-none scrollbar-hide"
+              className="outline-none scrollbar-hide !overflow-hidden"
               columnCount={columns}
               columnWidth={columnWidth}
               rowCount={rows}
               rowHeight={rowHeight}
-              width={columns * columnWidth}
-              height={rows * rowHeight}
+              width={availableWidth}
+              height={availableHeight}
               innerElementType="div"
               itemData={itemData}
             >

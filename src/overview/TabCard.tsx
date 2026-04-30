@@ -9,7 +9,9 @@ interface TabCardProps {
   isSelected: boolean;
   style: React.CSSProperties;
   uiScale?: number;
+  columnWidth?: number;
   onClick: (e: React.MouseEvent) => void;
+  onMouseEnter?: () => void;
   onClose: (e: React.MouseEvent) => void;
   isEnterAnim?: boolean;
   enterDelay?: number;
@@ -58,7 +60,7 @@ const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fall
  * calc(<base-px> * var(--s)) keeps everything proportional without hardcoding.
  * The scale uses sqrt in Overview so large cards get diminishing returns.
  */
-export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, onClick, onClose, isEnterAnim = true, enterDelay = 0 }: TabCardProps) => {
+export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, columnWidth = 260, onClick, onMouseEnter, onClose, isEnterAnim = true, enterDelay = 0 }: TabCardProps) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   
   const domain = tab.url ? (() => {
@@ -67,7 +69,6 @@ export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, onClick, onC
 
   useEffect(() => {
     let mounted = true;
-    // Clear immediately so we never show a stale thumbnail from a previous tab
     setThumbnailUrl(null);
     const loadThumbnail = async () => {
       const cached = await getThumbnail(tab.id);
@@ -80,28 +81,62 @@ export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, onClick, onC
     return () => { mounted = false; };
   }, [tab.id]);
 
+  // Compute the maximum safe scale that won't overflow the cell padding (8px each side).
+  // Card inner width = columnWidth - 16 (p-2 = 8px × 2).
+  // Scaling by S adds (cardWidth * (S-1) / 2) on each side.
+  // Constraint: cardWidth * (S-1) / 2 ≤ cellPadding  →  S ≤ 1 + 2*cellPadding / cardWidth
+  const cellPadding = 8;
+  const cardWidth = columnWidth - cellPadding * 2;
+  const cardHeight = (style as any).height ? (style as any).height - cellPadding * 2 : cardWidth;
+  const maxSafeScaleW = 1 + (cellPadding * 2) / cardWidth;
+  const maxSafeScaleH = 1 + (cellPadding * 2) / cardHeight;
+  const maxSafeScale = Math.min(maxSafeScaleW, maxSafeScaleH);
+  
+  // The tween with backOut easing overshoots by ~30% of the delta.
+  // So if we want peak ≤ maxSafeScale, the target must satisfy:
+  // target + (target - 1) * 0.3 ≤ maxSafeScale
+  // target * 1.3 - 0.3 ≤ maxSafeScale
+  // target ≤ (maxSafeScale + 0.3) / 1.3
+  const OVERSHOOT_FACTOR = 0.3;
+  const maxTargetScale = (maxSafeScale + OVERSHOOT_FACTOR) / (1 + OVERSHOOT_FACTOR);
+  const selectedScale = Math.min(1.03, maxTargetScale);
+  const hoverScale = Math.min(1.02, maxTargetScale);
+
   const cardStyle = {
     ...style,
     '--s': uiScale,
+    '--hover-scale': hoverScale,
   } as React.CSSProperties;
 
   return (
     <motion.div
       style={cardStyle}
       className="p-2"
+      onMouseEnter={onMouseEnter}
       initial={isEnterAnim ? { opacity: 0, scale: 0.96 } : false}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 280, damping: 24, delay: enterDelay }}
+      transition={{
+        opacity: { type: "spring", stiffness: 280, damping: 24, delay: enterDelay },
+        scale: { type: "spring", stiffness: 280, damping: 24, delay: enterDelay },
+      }}
     >
       <motion.div 
         onClick={onClick}
         animate={{
+          scale: isSelected ? selectedScale : 1,
+          filter: isSelected ? 'brightness(1)' : 'brightness(0.78)',
           boxShadow: isSelected
-            ? '0 0 0 2px #4c9aff, 0 12px 40px rgba(0,0,0,0.4)'
-            : '0 8px 30px rgba(0,0,0,0.25)'
+            ? '0 0 0 1px rgba(255,255,255,0.18), 0 4px 8px rgba(0,0,0,0.5)'
+            : '0 0 0 1px rgba(255,255,255,0), 0 2px 6px rgba(0,0,0,0.3)'
         }}
-        transition={{ type: "spring", stiffness: 400, damping: 28 }}
-        className="relative flex flex-col h-full bg-[#1e1e1e] rounded-[14px] overflow-hidden cursor-pointer group hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition-opacity duration-320 select-none"
+        transition={{
+          // backOut easing: overshoots by ~30% of delta then settles.
+          // Target scale is computed so peak never exceeds cell padding.
+          scale: { type: "tween", duration: 0.18, ease: [0.34, 1.56, 0.64, 1] },
+          filter: { type: "tween", duration: 0.15, ease: "easeOut" },
+          boxShadow: { type: "tween", duration: 0.08, ease: "easeOut" }
+        }}
+        className={`relative flex flex-col h-full rounded-[14px] overflow-hidden cursor-pointer group transition-[opacity,filter] duration-320 select-none will-change-transform [backface-visibility:hidden] ${isSelected ? 'bg-[#282828]' : 'bg-[#1e1e1e]'}`}
       >
         {/* Close Button */}
         <button
@@ -112,8 +147,8 @@ export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, onClick, onC
           <X size={Math.round(16 * uiScale)} className="text-white" />
         </button>
 
-        {/* Thumbnail Area */}
-        <div className="relative w-full flex-1 bg-[#121212] overflow-hidden rounded-t-[14px]">
+        {/* Thumbnail Area — lighter desaturation when unselected */}
+        <div className={`relative w-full flex-1 bg-[#121212] overflow-hidden rounded-t-[14px] transition-[filter] duration-200 ${isSelected ? 'grayscale-0' : 'grayscale-[0.15]'}`}>
           {thumbnailUrl ? (
             <img 
               src={thumbnailUrl} 
@@ -133,10 +168,10 @@ export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, onClick, onC
           )}
         </div>
 
-        {/* Footer — all dimensions driven by calc(<base> * var(--s)) */}
+        {/* Footer — heavier desaturation when unselected */}
         <div
-          className="flex items-center bg-[#242424]
-            p-[calc(12px*var(--s))] gap-[calc(12px*var(--s))]"
+          className={`flex items-center bg-[#242424] transition-[filter] duration-200
+            p-[calc(12px*var(--s))] gap-[calc(12px*var(--s))] ${isSelected ? 'grayscale-0' : 'grayscale-[0.8]'}`}
         >
           <div
             className="shrink-0 flex items-center justify-center rounded-sm bg-white/5
