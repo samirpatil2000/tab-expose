@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mosaic",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Fast keyboard-driven tab overview interface with thumbnails",
   "background": {
     "service_worker": "assets/background.js",
@@ -32,8 +32,8 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Ctrl+Shift+Period",
-        "mac": "Command+Shift+Period"
+        "default": "Alt+Q",
+        "mac": "MacCtrl+Q"
       },
       "description": "Open Mosaic Overview"
     }

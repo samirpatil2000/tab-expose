@@ -1,14 +1,17 @@
 import { memo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { TabInfo } from '../lib/tabManager';
-import { getThumbnail } from '../lib/thumbnailCache';
+import { getThumbnail, getThumbnailSync } from '../lib/thumbnailCache';
 import { X, Globe } from 'lucide-react';
 
 interface TabCardProps {
   tab: TabInfo;
   isSelected: boolean;
   style: React.CSSProperties;
+  uiScale?: number;
+  columnWidth?: number;
   onClick: (e: React.MouseEvent) => void;
+  onMouseEnter?: () => void;
   onClose: (e: React.MouseEvent) => void;
   isEnterAnim?: boolean;
   enterDelay?: number;
@@ -21,12 +24,12 @@ const getFaviconUrl = (u: string, size: number) => {
   return url.toString();
 };
 
-const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fallbackSize }: { pageUrl?: string, originalSrc?: string, className: string, fallbackClassName: string, fallbackSize: number }) => {
+const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fallbackSize, maxDisplaySize }: { pageUrl?: string, originalSrc?: string, className: string, fallbackClassName: string, fallbackSize: number, maxDisplaySize?: number }) => {
   const [errorCount, setErrorCount] = useState(0);
   
   let srcToTry;
-  if (errorCount === 0 && pageUrl && !pageUrl.startsWith('chrome://')) {
-    srcToTry = getFaviconUrl(pageUrl, 64);
+  if (errorCount === 0 && pageUrl) {
+    srcToTry = getFaviconUrl(pageUrl, 32);
   } else if (errorCount <= 1 && originalSrc) {
     srcToTry = originalSrc;
   }
@@ -35,102 +38,187 @@ const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fall
     return <Globe size={fallbackSize} className={fallbackClassName} />;
   }
   
-  return <img src={srcToTry} className={className} alt="" onError={() => setErrorCount(c => c + 1)} />;
+  // Render at a fixed CSS size that won't exceed the icon's native resolution.
+  // 32 physical pixels / dpr = CSS pixels. This prevents upscale blur.
+  const dpr = window.devicePixelRatio || 1;
+  const nativeCssSize = Math.round(32 / dpr);
+  const displaySize = maxDisplaySize ? Math.min(maxDisplaySize, nativeCssSize) : nativeCssSize;
+
+  return (
+    <img
+      src={srcToTry}
+      className={className}
+      style={{ width: displaySize, height: displaySize, imageRendering: 'auto' }}
+      alt=""
+      onError={() => setErrorCount(c => c + 1)}
+    />
+  );
 };
 
-export const TabCard = memo(({ tab, isSelected, style, onClick, onClose, isEnterAnim = true, enterDelay = 0 }: TabCardProps) => {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+/*
+ * All footer dimensions use the CSS custom property --s (the scale factor).
+ * calc(<base-px> * var(--s)) keeps everything proportional without hardcoding.
+ * The scale uses sqrt in Overview so large cards get diminishing returns.
+ */
+export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, columnWidth = 260, onClick, onMouseEnter, onClose, isEnterAnim = true, enterDelay = 0 }: TabCardProps) => {
+  // Initialize from memory cache synchronously — no placeholder flash if prefetched
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(() => getThumbnailSync(tab.id));
   
-  // Extract domain simply
   const domain = tab.url ? (() => {
     try { return new URL(tab.url).hostname; } catch { return ''; }
   })() : '';
 
   useEffect(() => {
     let mounted = true;
-    const loadThumbnail = async () => {
-      const cached = await getThumbnail(tab.url);
+    // If already have it from sync init, skip the async load
+    const syncUrl = getThumbnailSync(tab.id);
+    if (syncUrl) {
+      setThumbnailUrl(syncUrl);
+      return () => { mounted = false; };
+    }
+    // Otherwise fall back to async IDB read
+    setThumbnailUrl(null);
+    getThumbnail(tab.id).then(cached => {
       if (mounted && cached) {
         setThumbnailUrl(cached);
       }
-      // No capture here — background service worker handles all captures
-    };
-    
-    loadThumbnail();
+    });
     return () => { mounted = false; };
-  }, [tab.url, tab.windowId, tab.id]); // Re-run if URL changes
+  }, [tab.id]);
+
+  // Compute the maximum safe scale that won't overflow the cell padding (8px each side).
+  // Card inner width = columnWidth - 16 (p-2 = 8px × 2).
+  // Scaling by S adds (cardWidth * (S-1) / 2) on each side.
+  // Constraint: cardWidth * (S-1) / 2 ≤ cellPadding  →  S ≤ 1 + 2*cellPadding / cardWidth
+  const cellPadding = 8;
+  const cardWidth = columnWidth - cellPadding * 2;
+  const cardHeight = (style as any).height ? (style as any).height - cellPadding * 2 : cardWidth;
+  const maxSafeScaleW = 1 + (cellPadding * 2) / cardWidth;
+  const maxSafeScaleH = 1 + (cellPadding * 2) / cardHeight;
+  const maxSafeScale = Math.min(maxSafeScaleW, maxSafeScaleH);
+  
+  // The tween with backOut easing overshoots by ~30% of the delta.
+  // So if we want peak ≤ maxSafeScale, the target must satisfy:
+  // target + (target - 1) * 0.3 ≤ maxSafeScale
+  // target * 1.3 - 0.3 ≤ maxSafeScale
+  // target ≤ (maxSafeScale + 0.3) / 1.3
+  const OVERSHOOT_FACTOR = 0.3;
+  const maxTargetScale = (maxSafeScale + OVERSHOOT_FACTOR) / (1 + OVERSHOOT_FACTOR);
+  const selectedScale = Math.min(1.03, maxTargetScale);
+  const hoverScale = Math.min(1.02, maxTargetScale);
+
+  const cardStyle = {
+    ...style,
+    '--s': uiScale,
+    '--hover-scale': hoverScale,
+  } as React.CSSProperties;
 
   return (
     <motion.div
-      style={style}
-      className="p-2" // Padding inside the grid cell for gap
+      style={cardStyle}
+      className="p-2"
+      onMouseEnter={onMouseEnter}
       initial={isEnterAnim ? { opacity: 0, scale: 0.96 } : false}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 280, damping: 24, delay: enterDelay }}
+      transition={{
+        opacity: { type: "spring", stiffness: 280, damping: 24, delay: enterDelay },
+        scale: { type: "spring", stiffness: 280, damping: 24, delay: enterDelay },
+      }}
     >
       <motion.div 
         onClick={onClick}
-        animate={{
-          scale: isSelected ? 1.03 : 1,
+        initial={{
+          scale: isSelected ? selectedScale : 1,
+          filter: isSelected ? 'brightness(1)' : 'brightness(0.68)',
           boxShadow: isSelected
-            ? '0 0 0 2px #4c9aff, 0 12px 40px rgba(0,0,0,0.4)'
-            : '0 8px 30px rgba(0,0,0,0.25)'
+            ? '0 0 0 1px rgba(255,255,255,0.18), 0 4px 8px rgba(0,0,0,0.5)'
+            : '0 0 0 1px rgba(255,255,255,0), 0 2px 6px rgba(0,0,0,0.3)'
         }}
-        transition={{ type: "spring", stiffness: 400, damping: 28 }}
-        className="relative flex flex-col h-full bg-[#1e1e1e] rounded-[14px] overflow-hidden cursor-pointer group hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition-[opacity,transform] duration-[320ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.02] select-none"
+        animate={{
+          scale: isSelected ? selectedScale : 1,
+          filter: isSelected ? 'brightness(1)' : 'brightness(0.68)',
+          boxShadow: isSelected
+            ? '0 0 0 1px rgba(255,255,255,0.18), 0 4px 8px rgba(0,0,0,0.5)'
+            : '0 0 0 1px rgba(255,255,255,0), 0 2px 6px rgba(0,0,0,0.3)'
+        }}
+        transition={{
+          // backOut easing: overshoots by ~30% of delta then settles.
+          // Target scale is computed so peak never exceeds cell padding.
+          scale: { type: "tween", duration: 0.18, ease: [0.34, 1.56, 0.64, 1] },
+          filter: { type: "tween", duration: 0.15, ease: "easeOut" },
+          boxShadow: { type: "tween", duration: 0.08, ease: "easeOut" }
+        }}
+        className={`relative flex flex-col h-full rounded-[14px] overflow-hidden cursor-pointer group transition-[opacity,filter] duration-320 select-none will-change-transform [backface-visibility:hidden] ${isSelected ? 'bg-[#282828]' : 'bg-[#1e1e1e]'}`}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 z-10 w-7 h-7 bg-black/60 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute z-10 bg-black/60 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity
+            w-[calc(28px*var(--s))] h-[calc(28px*var(--s))] top-[calc(8px*var(--s))] right-[calc(8px*var(--s))]"
         >
-          <X size={16} className="text-white" />
+          <X size={Math.round(16 * uiScale)} className="text-white" />
         </button>
 
-        {/* Thumbnail Area */}
-        <div className="relative w-full aspect-[16/10] bg-[#121212] overflow-hidden rounded-t-[14px]">
+        {/* Thumbnail Area — lighter desaturation when unselected */}
+        <div className={`relative w-full flex-1 bg-[#121212] overflow-hidden rounded-t-[14px] transition-[filter] duration-200 ${isSelected ? 'grayscale-0' : 'grayscale-[0.15]'}`}>
           {thumbnailUrl ? (
             <img 
               src={thumbnailUrl} 
               alt="" 
-              className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-[180ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+              className={`w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-180 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isSelected ? 'scale-[1.04]' : ''}`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
               <FaviconImage 
                 pageUrl={tab.url}
                 originalSrc={tab.favIconUrl} 
-                className="w-12 h-12 opacity-30 grayscale" 
+                className="opacity-30 grayscale" 
                 fallbackClassName="text-white/10" 
-                fallbackSize={48} 
+                fallbackSize={48}
               />
             </div>
           )}
         </div>
 
-        {/* Footer Area */}
-        <div className="p-3 flex items-center gap-3 bg-[#242424] flex-1">
-          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-sm bg-white/5">
+        {/* Footer — heavier desaturation when unselected */}
+        <div
+          className={`flex items-center bg-[#242424] transition-[filter] duration-200
+            p-[calc(12px*var(--s))] gap-[calc(12px*var(--s))] ${isSelected ? 'grayscale-0' : 'grayscale-[0.8]'}`}
+        >
+          <div
+            className="shrink-0 flex items-center justify-center rounded-sm bg-white/5
+              w-[calc(20px*var(--s))] h-[calc(20px*var(--s))]"
+          >
             <FaviconImage 
               pageUrl={tab.url}
               originalSrc={tab.favIconUrl} 
-              className="w-4 h-4 object-contain" 
+              className="object-contain"
               fallbackClassName="text-white/50" 
-              fallbackSize={14} 
+              fallbackSize={14}
             />
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <h3 className="text-[13px] font-medium text-white truncate leading-tight">
+            <h3
+              className="font-medium text-white truncate leading-tight
+                text-[calc(13px*var(--s))]"
+            >
               {tab.title || 'Untitled'}
             </h3>
             {domain && (
-              <p className="text-[11px] text-white/40 truncate mt-0.5 leading-none">
+              <p
+                className="text-white/40 truncate leading-none
+                  text-[calc(11px*var(--s))] mt-[calc(2px*var(--s))]"
+              >
                 {domain}
               </p>
             )}
           </div>
           {tab.active && (
-            <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#4c9aff] shadow-[0_0_8px_#4c9aff]" title="Active Tab"></div>
+            <div
+              className="shrink-0 rounded-full bg-[#4c9aff] shadow-[0_0_8px_#4c9aff]
+                w-[calc(8px*var(--s))] h-[calc(8px*var(--s))]"
+              title="Active Tab"
+            />
           )}
         </div>
       </motion.div>

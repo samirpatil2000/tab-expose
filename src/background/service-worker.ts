@@ -9,27 +9,28 @@ async function openOverview() {
 
   const overviewUrl = chrome.runtime.getURL("overview/index.html");
   
-  // Find all windows to see if any contain our overview page
-  // We use includes() to be extra safe with URL matching
-  const windows = await chrome.windows.getAll({ populate: true });
-  const existingWindow = windows.find(win => 
-    win.tabs?.some(t => t.url && t.url.includes(overviewUrl))
-  );
+  // Check if an overview tab already exists in any window (match with or without query params)
+  const tabs = await chrome.tabs.query({ url: overviewUrl + '*' });
 
-  if (existingWindow && existingWindow.id) {
+  if (tabs.length > 0 && tabs[0].id) {
+    // Toggle: close the existing overview tab
     try {
-      await chrome.windows.remove(existingWindow.id);
+      await chrome.tabs.remove(tabs[0].id);
     } catch (e) {
-      console.error('Failed to close window:', e);
+      console.error('Failed to close tab:', e);
     }
     return;
   }
 
-  chrome.windows.create({
-    url: overviewUrl,
-    type: "popup",
-    state: "fullscreen"
-  });
+  // Find the currently active tab before opening the overview
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const sourceTabId = activeTab?.id;
+
+  // Open as a regular maximized tab, passing the source tab ID
+  const url = sourceTabId
+    ? `${overviewUrl}?from=${sourceTabId}`
+    : overviewUrl;
+  chrome.tabs.create({ url, active: true });
 }
 
 chrome.commands.onCommand.addListener((command) => {
@@ -44,7 +45,7 @@ chrome.action.onClicked.addListener(() => {
 
 // Capture thumbnail when a tab finishes loading
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.active && tab.url && tab.windowId && !tab.url.startsWith('chrome://')) {
+  if (changeInfo.status === 'complete' && tab.active && tab.url && tab.windowId) {
     new Promise<void>(resolve => setTimeout(resolve, 500)).then(() => {
       captureTabById(tabId, tab.windowId!, tab.url!);
     });

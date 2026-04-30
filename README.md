@@ -4,48 +4,53 @@
   <img src="public/mosaic-logo.svg" alt="Mosaic Logo" width="128" />
 </p>
 
-A fast, keyboard-driven tab overview interface for your browser. Find, manage, and switch between your open tabs with an elegant, Exposé-style grid featuring visual thumbnails.
+A fast, keyboard-driven tab overview for your browser. Find, manage, and switch between open tabs with an Exposé-style grid of live thumbnails.
 
 ## ✨ Features
 
-- **Visual Overview:** Instantly see all your open tabs across all browser windows in a clean, responsive grid layout.
-- **Live Thumbnails:** Get immediate visual context with automatically captured preview thumbnails of pages.
-- **Lightning-Fast Search:** Use fuzzy search to instantly filter tabs by title or URL. Just start typing!
-- **Keyboard-First Navigation:** Fully controllable via keyboard. Navigate the grid with arrow keys, hit `Enter` to switch, or `Escape` to close.
-- **Smart Auto-Focus:** Automatically centers and highlights your currently active tab the moment you open the overview.
-- **Tab Management:** Close unwanted tabs directly from the interface without losing your place.
-- **Modern UI/UX:** Built with React, Tailwind CSS, and Framer Motion for a sleek, responsive, and native-feeling experience.
+- **Tab-Based Overview:** Opens as a regular browser tab (not a popup) and auto-closes when you navigate away, switch tabs, or Alt+Tab out.
+- **Live Thumbnails:** Full-resolution preview thumbnails captured automatically — no downscaling, no blur.
+- **Lightning-Fast Search:** Fuzzy search by title or URL. Just start typing anywhere — the search bar focuses instantly, no Ctrl+F needed.
+- **Keyboard-First Navigation:** Arrow keys to move, Enter to switch, Escape to close. Delete to close a tab, Insert to open a new one, Home/End to jump to first/last, PageUp/PageDown to shift left/right.
+- **Content-Driven Adaptive Grid:** Layout scales based on tab count — cards grow to fill available space while maintaining aspect ratio, mathematically guaranteed to never overflow.
+- **Sliding Window:** Up to 18 tabs visible at once (3×6). The window slides to stay centered on the selected tab, with a position indicator for large tab counts.
+- **Smart Auto-Focus:** Highlights your currently active tab the moment you open the overview.
+- **Tab Management:** Close tabs directly from the overview. Single click to open — no double-click needed.
+- **Unified Selection Model:** Mouse hover and keyboard navigation share the same selection state. One model, two input methods.
+- **In-Memory Thumbnail Cache:** `Map` layer above IndexedDB with batch prefetch for zero-flash initial render.
+- **Modern UI/UX:** React 19, Tailwind CSS, Framer Motion. Subtle visual treatment — selected card gets a white border, brightness lift, and shadow; unselected thumbnails desaturate gently.
 
 ## 🖼️ Screenshots And Demo
 
-<img width="1438" height="893" alt="Image" src="https://github.com/user-attachments/assets/91004dae-acfd-49ce-9a6b-53d66d1a2834" />
+<img width="1438" height="893" alt="Mosaic overview grid" src="https://github.com/user-attachments/assets/f3e4fe20-3faf-4c5e-a19c-b4508600b3e6" />
 
-___ 
+___
 
 https://github.com/user-attachments/assets/08a8f47d-d7fe-4076-a6d6-1242ffcd1721
 
-
-
 ## ⌨️ Shortcuts
 
-- **Summon & Dismiss:** `Command+Shift+.` (Mac) / `Ctrl+Shift+.` (Windows/Linux). *Press once to reveal your digital workspace. Press again to seamlessly glide back to your active tab.* You can also set your own custom shortcut for opening and closing Mosaic.
-- **Navigate Grid:** Arrow Keys (`↑`, `↓`, `←`, `→`)
-- **Switch to Tab:** `Enter` or single-click an already highlighted card.
-- **Close Tab:** Mouse hover + click the `X` button
-- **Global Search:** Begin typing anywhere to instantly focus the search bar
+| Action | Shortcut |
+|---|---|
+| Open Overview | `Alt+Q` (Windows/Linux) · `Ctrl+Q` (Mac) |
+| Navigate Grid | Arrow Keys (`↑` `↓` `←` `→`) |
+| Switch to Tab | `Enter` or single-click |
+| Close Tab | `Delete`, or hover + click `X` |
+| New Tab (after current) | `Insert` |
+| First / Last Tab | `Home` / `End` |
+| Move Left / Right | `PageUp` / `PageDown` |
+| Search | Start typing anywhere |
+| Dismiss | `Escape`, or press the open shortcut again |
 
 > [!TIP]
-> You can manually customize or fix these shortcuts — including the one for opening and closing Mosaic — by navigating to `chrome://extensions/shortcuts` in your browser, or by clicking the redirect icon in Mosaic window.
-
+> You can customize all shortcuts — including the one for opening the overview — at `chrome://extensions/shortcuts`, or by clicking the redirect icon inside the Mosaic window.
 
 ## 🚀 Installation & Development
 
-Mosaic is built as a highly optimized Vite extension project using React and TypeScript.
-
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) installed
-- npm or yarn
+- [Node.js](https://nodejs.org/)
+- npm
 
 ### Local Setup
 
@@ -57,7 +62,7 @@ Mosaic is built as a highly optimized Vite extension project using React and Typ
 
 2. **Install dependencies:**
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 3. **Build the extension:**
@@ -65,41 +70,54 @@ Mosaic is built as a highly optimized Vite extension project using React and Typ
    npm run build
    ```
 
-4. **Load into Google Chrome / Edge / Brave:**
-   - Open your browser and navigate to `chrome://extensions/`
-   - Enable **Developer mode** using the toggle in the top right corner.
-   - Click **Load unpacked** in the top left.
-   - Select the `dist` folder located in the project directory.
+4. **Load into Chrome / Edge / Brave:**
+   - Navigate to `chrome://extensions/`
+   - Enable **Developer mode** (top right toggle)
+   - Click **Load unpacked** (top left)
+   - Select the `dist` folder
+
+### Development Workflow
+
+Run two terminals side by side for a fully automated dev loop:
+
+```bash
+# Terminal 1 — watch & rebuild on every file change
+npm run dev
+
+# Terminal 2 — launch Chromium with auto-reload
+npm run dev:ext
+```
+
+Edit a file → Vite rebuilds `dist/` → `web-ext` detects the change → extension reloads automatically. No manual clicking.
 
 ### Packaging for Distribution
 
-If you want to create a shareable `.zip` file that others can install via "Load unpacked", we provide a convenience script that automatically builds and zips the project.
-
-Run the following command from the project root:
+Build and zip in one step:
 ```bash
 sh build_and_pack.sh
 ```
-This will generate a `mosaic-extension.zip` file ready to be shared.
+Produces `mosaic-extension.zip` ready to share or sideload.
 
 ## 🛠️ Tech Stack
 
 - **Framework:** React 19 + TypeScript
 - **Build Tool:** Vite
-- **Styling:** Tailwind CSS + Lucide React icons
+- **Styling:** Tailwind CSS 4 + Lucide React icons
 - **Animations:** Framer Motion
-- **Search Engine:** Fuse.js
-- **Performance:** `react-window` for virtualized grid rendering (handles hundreds of tabs smoothly)
+- **Search:** Fuse.js
+- **Thumbnail Storage:** idb-keyval (IndexedDB) with in-memory cache layer
+- **Utilities:** clsx, tailwind-merge
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are always welcome! Whether it's a bug report or a new feature idea, feel free to open an issue or submit a pull request.
+Contributions, issues, and feature requests are welcome. Open an issue or submit a pull request.
 
 ## 🔒 Privacy Policy
 
-Mosaic respects your privacy. All processing and thumbnail generation happens locally on your machine. No browsing data, history, or personal information is ever collected, transmitted, or sold.
+All processing and thumbnail generation happens locally. No browsing data is collected, transmitted, or sold.
 
 Read the full [Privacy Policy](PRIVACY.md).
 
 ## 📝 License
 
-This project is open-source and available under the [MIT License](LICENSE).
+Open-source under the [MIT License](LICENSE).
