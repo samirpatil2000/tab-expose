@@ -62,7 +62,7 @@ https://github.com/user-attachments/assets/08a8f47d-d7fe-4076-a6d6-1242ffcd1721
 
 2. **Install dependencies:**
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 3. **Build the extension:**
@@ -75,6 +75,20 @@ https://github.com/user-attachments/assets/08a8f47d-d7fe-4076-a6d6-1242ffcd1721
    - Enable **Developer mode** (top right toggle)
    - Click **Load unpacked** (top left)
    - Select the `dist` folder
+
+### Development Workflow
+
+Run two terminals side by side for a fully automated dev loop:
+
+```bash
+# Terminal 1 — watch & rebuild on every file change
+npm run dev
+
+# Terminal 2 — launch Chromium with auto-reload
+npm run dev:ext
+```
+
+Edit a file → Vite rebuilds `dist/` → `web-ext` detects the change → extension reloads automatically. No manual clicking.
 
 ### Packaging for Distribution
 
