@@ -32,8 +32,8 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Ctrl+Shift+Period",
-        "mac": "Command+Shift+Period"
+        "default": "Alt+Q",
+        "mac": "MacCtrl+Q"
       },
       "description": "Open Mosaic Overview"
     }

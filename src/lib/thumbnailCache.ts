@@ -1,8 +1,7 @@
-import { get, set, del, keys } from 'idb-keyval';
+import { get, set, del, keys, getMany } from 'idb-keyval';
 
 const MAX_THUMBNAILS = 500;
 
-// Cache key prefix to distinguish thumbnail entries from other idb-keyval data
 const KEY_PREFIX = 'thumb:';
 
 function cacheKey(tabId: number): string {
@@ -14,15 +13,65 @@ interface CacheEntry {
   timestamp: number;
 }
 
+// In-memory cache — populated by prefetch, avoids repeated IDB reads
+const memoryCache = new Map<number, string>();
+
 export async function getThumbnail(tabId: number): Promise<string | null> {
+  // Check memory cache first (instant)
+  const cached = memoryCache.get(tabId);
+  if (cached) return cached;
+
   const entry = await get<CacheEntry>(cacheKey(tabId));
   if (entry) {
-    // Update LRU timestamp
-    entry.timestamp = Date.now();
-    await set(cacheKey(tabId), entry);
+    memoryCache.set(tabId, entry.dataUrl);
+    // Update LRU timestamp in background — don't block
+    set(cacheKey(tabId), { ...entry, timestamp: Date.now() }).catch(() => {});
     return entry.dataUrl;
   }
   return null;
+}
+
+/**
+ * Get a thumbnail synchronously from the in-memory cache.
+ * Returns null if not prefetched yet.
+ */
+export function getThumbnailSync(tabId: number): string | null {
+  return memoryCache.get(tabId) ?? null;
+}
+
+/** Prefetch thumbnails for multiple tabs in a single batch IDB read. */
+export async function prefetchThumbnails(tabIds: number[]): Promise<Map<number, string>> {
+  const result = new Map<number, string>();
+  const keysToFetch = tabIds.filter(id => !memoryCache.has(id));
+
+  if (keysToFetch.length === 0) {
+    // All already in memory
+    for (const id of tabIds) {
+      const url = memoryCache.get(id);
+      if (url) result.set(id, url);
+    }
+    return result;
+  }
+
+  const entries = await getMany<CacheEntry | undefined>(keysToFetch.map(id => cacheKey(id)));
+
+  for (let i = 0; i < keysToFetch.length; i++) {
+    const entry = entries[i];
+    if (entry?.dataUrl) {
+      memoryCache.set(keysToFetch[i], entry.dataUrl);
+      result.set(keysToFetch[i], entry.dataUrl);
+    }
+  }
+
+  // Also include already-cached ones
+  for (const id of tabIds) {
+    if (!result.has(id)) {
+      const url = memoryCache.get(id);
+      if (url) result.set(id, url);
+    }
+  }
+
+  return result;
 }
 
 // Limit concurrent captures

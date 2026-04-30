@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { TabInfo } from '../lib/tabManager';
-import { getThumbnail } from '../lib/thumbnailCache';
+import { getThumbnail, getThumbnailSync } from '../lib/thumbnailCache';
 import { X, Globe } from 'lucide-react';
 
 interface TabCardProps {
@@ -61,7 +61,8 @@ const FaviconImage = ({ pageUrl, originalSrc, className, fallbackClassName, fall
  * The scale uses sqrt in Overview so large cards get diminishing returns.
  */
 export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, columnWidth = 260, onClick, onMouseEnter, onClose, isEnterAnim = true, enterDelay = 0 }: TabCardProps) => {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  // Initialize from memory cache synchronously — no placeholder flash if prefetched
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(() => getThumbnailSync(tab.id));
   
   const domain = tab.url ? (() => {
     try { return new URL(tab.url).hostname; } catch { return ''; }
@@ -69,15 +70,19 @@ export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, columnWidth 
 
   useEffect(() => {
     let mounted = true;
+    // If already have it from sync init, skip the async load
+    const syncUrl = getThumbnailSync(tab.id);
+    if (syncUrl) {
+      setThumbnailUrl(syncUrl);
+      return () => { mounted = false; };
+    }
+    // Otherwise fall back to async IDB read
     setThumbnailUrl(null);
-    const loadThumbnail = async () => {
-      const cached = await getThumbnail(tab.id);
+    getThumbnail(tab.id).then(cached => {
       if (mounted && cached) {
         setThumbnailUrl(cached);
       }
-    };
-    
-    loadThumbnail();
+    });
     return () => { mounted = false; };
   }, [tab.id]);
 
@@ -122,9 +127,16 @@ export const TabCard = memo(({ tab, isSelected, style, uiScale = 1, columnWidth 
     >
       <motion.div 
         onClick={onClick}
+        initial={{
+          scale: isSelected ? selectedScale : 1,
+          filter: isSelected ? 'brightness(1)' : 'brightness(0.68)',
+          boxShadow: isSelected
+            ? '0 0 0 1px rgba(255,255,255,0.18), 0 4px 8px rgba(0,0,0,0.5)'
+            : '0 0 0 1px rgba(255,255,255,0), 0 2px 6px rgba(0,0,0,0.3)'
+        }}
         animate={{
           scale: isSelected ? selectedScale : 1,
-          filter: isSelected ? 'brightness(1)' : 'brightness(0.78)',
+          filter: isSelected ? 'brightness(1)' : 'brightness(0.68)',
           boxShadow: isSelected
             ? '0 0 0 1px rgba(255,255,255,0.18), 0 4px 8px rgba(0,0,0,0.5)'
             : '0 0 0 1px rgba(255,255,255,0), 0 2px 6px rgba(0,0,0,0.3)'

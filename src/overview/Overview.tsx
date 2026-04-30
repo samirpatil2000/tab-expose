@@ -9,6 +9,7 @@ import type { TabInfo } from '../lib/tabManager';
 import { useKeyboardNavigation, parseShortcut } from '../lib/keyboard';
 import { TabCard } from './TabCard';
 import { SearchBar } from './SearchBar';
+import { prefetchThumbnails } from '../lib/thumbnailCache';
 
 const MIN_CARD_WIDTH = 260;
 const BASE_CARD_HEIGHT = 220;
@@ -109,15 +110,19 @@ const Cell = ({ columnIndex, rowIndex, style, data }: any) => {
   const tab = windowTabs[localIndex];
   const globalIndex = windowStart + localIndex;
 
+  // Only the selected card gets an entrance animation — it's the only thing
+  // moving on load, so the eye is drawn directly to it.
+  const isSelectedCard = globalIndex === globalSelectedIndex;
+
   return (
     <TabCard
       tab={tab}
-      isSelected={globalIndex === globalSelectedIndex}
+      isSelected={isSelectedCard}
       style={style}
       uiScale={uiScale}
       columnWidth={columnWidth}
-      isEnterAnim={!query}
-      enterDelay={Math.min(localIndex * 0.03, 0.18)}
+      isEnterAnim={isSelectedCard && !query}
+      enterDelay={0}
       onClick={() => handleClick(globalIndex)}
       onMouseEnter={() => handleHover(globalIndex)}
       onClose={(e) => {
@@ -154,11 +159,15 @@ export function Overview() {
     };
 
     const fetchTabs = () => {
-      getAllTabs().then(res => {
+      getAllTabs().then(async (res) => {
         if (!mounted) return;
 
+        // Prefetch thumbnails BEFORE setting tabs state.
+        // This populates the memory cache so TabCards render with
+        // thumbnails on their very first paint — no placeholder flash.
+        await prefetchThumbnails(res.map(t => t.id));
+
         // Only update state if the tab list actually changed.
-        // Compare by tab IDs and their order to avoid unnecessary re-renders.
         setTabs(prev => {
           const isSame = prev.length === res.length &&
             prev.every((t, i) => t.id === res[i].id && t.title === res[i].title && t.url === res[i].url && t.active === res[i].active && t.index === res[i].index && t.windowId === res[i].windowId);
@@ -470,11 +479,11 @@ export function Overview() {
               {Cell}
             </Grid>
           </div>
-        ) : (
+        ) : query && tabs.length > 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-white/40">
             <p>No tabs found for "{query}"</p>
           </div>
-        )}
+        ) : null}
       </div>
     </motion.div>
   );
