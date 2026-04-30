@@ -145,11 +145,25 @@ export function Overview() {
 
   useEffect(() => {
     let mounted = true;
+    let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    // Debounced fetch — coalesces rapid tab events into a single update
+    const scheduleFetch = () => {
+      if (fetchTimeout) clearTimeout(fetchTimeout);
+      fetchTimeout = setTimeout(fetchTabs, 150);
+    };
 
     const fetchTabs = () => {
       getAllTabs().then(res => {
         if (!mounted) return;
-        setTabs(res);
+
+        // Only update state if the tab list actually changed.
+        // Compare by tab IDs and their order to avoid unnecessary re-renders.
+        setTabs(prev => {
+          const isSame = prev.length === res.length &&
+            prev.every((t, i) => t.id === res[i].id && t.title === res[i].title && t.url === res[i].url && t.active === res[i].active && t.index === res[i].index && t.windowId === res[i].windowId);
+          return isSame ? prev : res;
+        });
 
         if (!initialLoadDone.current && res.length > 0) {
           const params = new URLSearchParams(window.location.search);
@@ -167,23 +181,33 @@ export function Overview() {
       });
     };
 
+    // Initial fetch is immediate
     fetchTabs();
 
-    chrome.tabs.onMoved.addListener(fetchTabs);
-    chrome.tabs.onDetached.addListener(fetchTabs);
-    chrome.tabs.onAttached.addListener(fetchTabs);
-    chrome.tabs.onCreated.addListener(fetchTabs);
-    chrome.tabs.onRemoved.addListener(fetchTabs);
-    chrome.tabs.onUpdated.addListener(fetchTabs);
+    // Only listen for structural changes, not every update
+    chrome.tabs.onMoved.addListener(scheduleFetch);
+    chrome.tabs.onDetached.addListener(scheduleFetch);
+    chrome.tabs.onAttached.addListener(scheduleFetch);
+    chrome.tabs.onCreated.addListener(scheduleFetch);
+    chrome.tabs.onRemoved.addListener(scheduleFetch);
+
+    // onUpdated fires very frequently — only refetch on meaningful changes
+    const handleUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (changeInfo.title || changeInfo.url || changeInfo.status === 'complete') {
+        scheduleFetch();
+      }
+    };
+    chrome.tabs.onUpdated.addListener(handleUpdated);
 
     return () => {
       mounted = false;
-      chrome.tabs.onMoved.removeListener(fetchTabs);
-      chrome.tabs.onDetached.removeListener(fetchTabs);
-      chrome.tabs.onAttached.removeListener(fetchTabs);
-      chrome.tabs.onCreated.removeListener(fetchTabs);
-      chrome.tabs.onRemoved.removeListener(fetchTabs);
-      chrome.tabs.onUpdated.removeListener(fetchTabs);
+      if (fetchTimeout) clearTimeout(fetchTimeout);
+      chrome.tabs.onMoved.removeListener(scheduleFetch);
+      chrome.tabs.onDetached.removeListener(scheduleFetch);
+      chrome.tabs.onAttached.removeListener(scheduleFetch);
+      chrome.tabs.onCreated.removeListener(scheduleFetch);
+      chrome.tabs.onRemoved.removeListener(scheduleFetch);
+      chrome.tabs.onUpdated.removeListener(handleUpdated);
     };
   }, []);
 
@@ -300,10 +324,7 @@ export function Overview() {
     const tab = filteredTabs[index];
     if (tab) {
       apiCloseTab(tab.id);
-      setTabs(prev => prev.filter(t => t.id !== tab.id));
-      if (index >= filteredTabs.length - 1) {
-        setSelectedIndex(Math.max(0, filteredTabs.length - 2));
-      }
+      // Let the tab event listener handle the state update
     }
   }, [filteredTabs]);
 
@@ -353,8 +374,11 @@ export function Overview() {
     setSelectedIndex(0);
   };
 
-  const uiScale = Math.sqrt(columnWidth / MIN_CARD_WIDTH);
+  const uiScale = useMemo(() => Math.sqrt(columnWidth / MIN_CARD_WIDTH), [columnWidth]);
 
+  // Separate stable data from volatile selection index.
+  // itemData changes trigger react-window to re-render all cells.
+  // By keeping handlers and layout stable, only selectedIndex changes cause updates.
   const itemData = useMemo(() => ({
     windowTabs,
     windowStart,
